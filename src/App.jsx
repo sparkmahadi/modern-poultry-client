@@ -1,10 +1,11 @@
+import Home from "./pages/Home/Home"
+
 function App() {
 
   return (
     <>
       <div>
-        <h1>EP</h1>
-
+        <Home />
       </div>
     </>
   )
