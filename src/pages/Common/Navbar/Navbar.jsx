@@ -18,10 +18,9 @@ const Navbar = () => {
         { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'Products', icon: Package, href: '/products' },
         { name: 'Categories', icon: List, href: '/categories' }, // Changed to List
-        { name: 'Budgets', icon: PiggyBank, href: '/budgets' },
-        { name: 'Expenses', icon: ReceiptText, href: '/expenses' },
-        { name: 'Expense Notes', icon: ReceiptText, href: '/expense-notes' },
-        { name: 'Consumptions', icon: NotebookPen, href: '/consumptions' }, // Changed to NotebookPen
+        { name: 'Customers', icon: List, href: '/customers' }, // Changed to List
+        { name: 'Sales', icon: List, href: '/sales' }, // Changed to List
+        { name: 'Purchases', icon: List, href: '/purchases' }, // Changed to List
         { name: 'Reports', icon: ClipboardList, href: '/reports' }, // Changed to ClipboardList
     ];
 
@@ -35,7 +34,7 @@ const Navbar = () => {
                     to={'/'}
                     className="flex items-center text-xl font-bold rounded-md px-3 py-1 cursor-pointer hover:bg-blue-700 transition duration-300 whitespace-nowrap"
                 >
-                    Family Budget
+                    Modern Poultry
                 </Link>
 
                 {/* Mobile menu button */}
