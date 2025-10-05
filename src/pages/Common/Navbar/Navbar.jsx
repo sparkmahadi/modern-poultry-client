@@ -18,6 +18,7 @@ const Navbar = () => {
         { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'Products', icon: Package, href: '/products' },
         { name: 'Categories', icon: List, href: '/categories' }, // Changed to List
+        { name: 'Suppliers', icon: List, href: '/suppliers' }, // Changed to List
         { name: 'Customers', icon: List, href: '/customers' }, // Changed to List
         { name: 'Sales', icon: List, href: '/sales' }, // Changed to List
         { name: 'Purchases', icon: List, href: '/purchases' }, // Changed to List

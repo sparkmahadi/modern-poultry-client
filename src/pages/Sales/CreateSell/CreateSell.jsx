@@ -1,5 +1,5 @@
 import React from 'react';
-import MemoForm from './MemoForm';
+import MemoForm from './SalesMemo/MemoForm';
 
 const CreateSell = () => {
     return (
