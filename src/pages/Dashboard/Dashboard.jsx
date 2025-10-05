@@ -28,6 +28,8 @@ const navigation = [
     { name: 'Customers', icon: User, href: '/customers', description: 'View and manage customer details and dues.' },
     { name: 'Sales', icon: ShoppingBag, href: '/sales', description: 'Process orders and view sales history.' },
     { name: 'Purchases', icon: Receipt, href: '/purchases', description: 'Record stock acquisitions and spending.' },
+    { name: 'Transactions', icon: ClipboardList, href: '/transactions', description: 'Generate business insights and data reports.' },
+    { name: 'Cash', icon: ClipboardList, href: '/cash', description: 'Generate business insights and data reports.' },
     { name: 'Reports', icon: ClipboardList, href: '/reports', description: 'Generate business insights and data reports.' },
 ];
 

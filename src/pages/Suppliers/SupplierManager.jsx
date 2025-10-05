@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router";
+import { Search } from 'lucide-react'; // Import Search icon
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Helper components for consistency and readability (unchanged)
 const InputField = ({ label, name, type = "text", value, onChange, placeholder, required = false, className = "" }) => (
     <div className={`flex flex-col ${className}`}>
@@ -44,13 +46,14 @@ const SupplierManager = () => {
         name: "",
         address: "",
         phone: "",
-        type: "regular", // Changed default type for supplier context
-        due: 0, // Amount you owe the supplier
-        advance: 0, // Amount supplier owes you (or you paid in advance)
+        type: "regular",
+        due: 0,
+        advance: 0,
         status: "active",
     };
 
     const [suppliers, setSuppliers] = useState([]);
+    const [searchTerm, setSearchTerm] = useState(''); // NEW SEARCH STATE
     const [form, setForm] = useState(initialFormState);
     const [editingId, setEditingId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +68,7 @@ const SupplierManager = () => {
         setError(null);
         try {
             const res = await axios.get(`${API_BASE_URL}/api/suppliers`);
+            // Assuming res.data.data contains the list
             setSuppliers(res.data.data || []);
         } catch (err) {
             console.error(err);
@@ -76,7 +80,6 @@ const SupplierManager = () => {
 
     const handleChange = (e) => {
         const { name, value, type } = e.target;
-        // Ensure numerical inputs are parsed correctly
         const newValue = type === 'number' ? Number(value) : value;
         setForm({ ...form, [name]: newValue });
     };
@@ -86,6 +89,7 @@ const SupplierManager = () => {
         setEditingId(null);
     };
 
+    // ... handleSubmit, handleEdit, handleDelete functions remain the same ...
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -109,7 +113,7 @@ const SupplierManager = () => {
     const handleEdit = (supplier) => {
         setForm(supplier);
         setEditingId(supplier._id);
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to the form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleDelete = async (id) => {
@@ -128,15 +132,30 @@ const SupplierManager = () => {
         return <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color} capitalize`}>{status}</span>;
     };
 
-    // BALANCE LOGIC:
-    // Positive balance (due > advance) means WE OWE THE SUPPLIER (Payable) -> Red
-    // Negative balance (advance > due) means SUPPLIER OWES US (Receivable) -> Green
     const getBalanceStyle = (due, advance) => {
         const balance = due - advance;
-        if (balance > 0) return { className: 'text-red-600 font-bold', label: `Payable: ৳${balance.toFixed(2)}` }; // We owe the supplier
-        if (balance < 0) return { className: 'text-green-600 font-bold', label: `Receivable: ৳${Math.abs(balance).toFixed(2)}` }; // Supplier owes us (Advance)
+        if (balance > 0) return { className: 'text-red-600 font-bold', label: `Payable: ৳${balance.toFixed(2)}` };
+        if (balance < 0) return { className: 'text-green-600 font-bold', label: `Receivable: ৳${Math.abs(balance).toFixed(2)}` };
         return { className: 'text-gray-500', label: 'Settled' };
     };
+
+    // ===========================================
+    // === NEW FEATURE: Client-Side Filtering ===
+    // ===========================================
+    const filteredSuppliers = useMemo(() => {
+        if (!searchTerm) {
+            return suppliers;
+        }
+
+        const lowerCaseSearch = searchTerm.toLowerCase();
+
+        return suppliers.filter(supplier => (
+            supplier.name.toLowerCase().includes(lowerCaseSearch) ||
+            supplier.phone.toLowerCase().includes(lowerCaseSearch) ||
+            supplier.address.toLowerCase().includes(lowerCaseSearch) ||
+            supplier.type.toLowerCase().includes(lowerCaseSearch)
+        ));
+    }, [suppliers, searchTerm]);
 
     return (
         <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
@@ -194,7 +213,6 @@ const SupplierManager = () => {
                             placeholder="Business Address / Location"
                         />
                         <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                            {/* Note: due is the amount WE OWE the supplier */}
                             <InputField
                                 label="Current Payable (৳)"
                                 name="due"
@@ -203,7 +221,6 @@ const SupplierManager = () => {
                                 onChange={handleChange}
                                 placeholder="0"
                             />
-                            {/* Note: advance is the amount SUPPLIER OWES US (Advance Payment) */}
                             <InputField
                                 label="Current Receivable (৳)"
                                 name="advance"
@@ -245,13 +262,31 @@ const SupplierManager = () => {
                     </form>
                 </div>
 
-                {/* === Supplier List Table === */}
+                {/* === Supplier List Table with Search === */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Supplier List ({suppliers.length})</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Supplier List ({filteredSuppliers.length} / {suppliers.length})</h2>
+
+                    {/* NEW SEARCH INPUT */}
+                    <div className="mb-4 relative">
+                        <input
+                            type="text"
+                            placeholder="Search by name, phone, or address..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                        />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    </div>
+                    {/* END NEW SEARCH INPUT */}
+                    
                     <hr className="mb-4" />
 
                     {isLoading && !suppliers.length ? (
                         <div className="text-center py-10 text-gray-500">Loading data...</div>
+                    ) : filteredSuppliers.length === 0 && searchTerm ? (
+                        <div className="text-center py-10 text-gray-500">
+                            No suppliers found matching "{searchTerm}".
+                        </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
@@ -264,7 +299,8 @@ const SupplierManager = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {suppliers.map((sup) => {
+                                    {/* Use filteredSuppliers here */}
+                                    {filteredSuppliers.map((sup) => {
                                         const balanceInfo = getBalanceStyle(sup.due, sup.advance);
                                         return (
                                             <tr key={sup._id} className="hover:bg-yellow-50/50 transition-colors">
@@ -284,7 +320,7 @@ const SupplierManager = () => {
                                                 <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
                                                     <div className="flex justify-center space-x-2">
                                                         <button
-                                                            className="bg-yellow-500 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 transition"
+                                                            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition"
                                                             onClick={() => navigate(sup._id)}
                                                         >
                                                             Details
@@ -311,7 +347,7 @@ const SupplierManager = () => {
                         </div>
                     )}
 
-                    {!isLoading && suppliers.length === 0 && (
+                    {!isLoading && suppliers.length === 0 && !searchTerm && (
                         <div className="text-center py-10 text-gray-500">No suppliers recorded yet.</div>
                     )}
                 </div>
