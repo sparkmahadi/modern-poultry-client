@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-// NOTE: You MUST import the 'Link' component from 'react-router-dom'
-// import { Link } from 'react-router-dom'; 
 
 import {
     LayoutDashboard,
@@ -16,13 +14,14 @@ import {
     DollarSign,
     Users,
     Warehouse,
-} from 'lucide-react'; 
+} from 'lucide-react';
 import { Link } from 'react-router';
 
 // === 1. Navigation Links ===
 const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', description: 'System key performance indicators.' },
     { name: 'Products', icon: Package, href: '/products', description: 'Manage inventory and product details.' },
+    { name: 'Inventory', icon: Package, href: '/inventory', description: 'Manage inventory and product details.'  },
     { name: 'Categories', icon: List, href: '/categories', description: 'Organize products into groups.' },
     { name: 'Suppliers', icon: Truck, href: '/suppliers', description: 'View and manage all suppliers and payables.' },
     { name: 'Customers', icon: User, href: '/customers', description: 'View and manage customer details and dues.' },
@@ -37,10 +36,10 @@ const navigation = [
 const NavItem = ({ item, currentPath }) => {
     const Icon = item.icon;
     const isActive = currentPath === item.href || (item.href !== '/dashboard' && currentPath.startsWith(item.href));
-    
+
     // 💡 CHANGE: Replaced <a> with the structure for <Link>
     return (
-        <Link 
+        <Link
             to={item.href} // Use 'to' instead of 'href'
             className={`
                 flex items-center p-3 rounded-xl transition-all duration-200 ease-in-out group
@@ -49,7 +48,7 @@ const NavItem = ({ item, currentPath }) => {
                     : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'
                 }
             `}
-            // Note: onClick handler for setting currentPath is removed/moved to the main component's state logic
+        // Note: onClick handler for setting currentPath is removed/moved to the main component's state logic
         >
             <Icon className={`w-6 h-6 mr-3 ${isActive ? 'text-white' : 'group-hover:text-blue-600'}`} />
             <span className="text-base font-semibold">{item.name}</span>
@@ -60,10 +59,10 @@ const NavItem = ({ item, currentPath }) => {
 // === 2.5. Nav Card Component (Now using <Link>) ===
 const NavCard = ({ item }) => {
     const Icon = item.icon;
-    
+
     // 💡 CHANGE: Replaced <a> with the structure for <Link>
     return (
-        <Link 
+        <Link
             to={item.href} // Use 'to' instead of 'href'
             className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-xl shadow-md 
                        hover:shadow-xl hover:border-blue-500 transition duration-200 group"
@@ -86,7 +85,7 @@ const Sidebar = ({ currentPath }) => {
             {/* Mobile Header/Menu Button */}
             <div className="lg:hidden p-4 bg-white border-b sticky top-0 z-40 flex items-center justify-between">
                 <span className="text-xl font-bold text-gray-800">App Dashboard</span>
-                <button 
+                <button
                     onClick={() => setIsOpen(!isOpen)}
                     className="p-2 text-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -110,18 +109,18 @@ const Sidebar = ({ currentPath }) => {
                 </div>
                 <nav className="space-y-2 pt-4 lg:pt-0">
                     {navigation.map((item) => (
-                        <NavItem 
-                            key={item.name} 
-                            item={item} 
+                        <NavItem
+                            key={item.name}
+                            item={item}
                             currentPath={currentPath}
                         />
                     ))}
                 </nav>
             </aside>
-            
+
             {/* Backdrop for Mobile */}
             {isOpen && (
-                <div 
+                <div
                     onClick={() => setIsOpen(false)}
                     className="fixed inset-0 z-20 bg-black opacity-40 lg:hidden"
                 />
@@ -157,12 +156,12 @@ const metrics = [
 
 // === 5. The Full Dashboard Component ===
 const Dashboard = () => {
-    const [currentPath, setCurrentPath] = useState('/dashboard'); 
+    const [currentPath, setCurrentPath] = useState('/dashboard');
 
     const renderContent = () => {
         const primaryNavLinks = navigation.filter(item => item.href !== '/dashboard');
 
-        switch(currentPath) {
+        switch (currentPath) {
             case '/dashboard':
                 return (
                     <>
@@ -172,7 +171,7 @@ const Dashboard = () => {
                                 <MetricCard key={metric.title} {...metric} />
                             ))}
                         </div>
-                        
+
                         {/* THE NAVIGATION CARD GRID */}
                         <h2 className="text-3xl font-bold text-gray-800 mt-12 mb-6">Quick Navigation</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -198,7 +197,7 @@ const Dashboard = () => {
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}
             {/* 💡 NOTE: In a real app, you'd use useLocation() to pass the currentPath */}
-            <Sidebar currentPath={currentPath} /> 
+            <Sidebar currentPath={currentPath} />
 
             {/* Main Content Area */}
             <main className="flex-1 p-4 lg:p-8">

@@ -51,13 +51,12 @@ const AddProductForm = ({ apiInProgress, fetchProducts, setApiInProgress, catego
         try {
             const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/products`, productData);
             console.log(response);
-            toast.success('Product added successfully!');
-            await fetchProducts(); // Re-fetch to update the list
-            setShowAddProductForm(false); // Hide the form on success
-            setNewProductData({ // Reset form
-                id: '', item_name: '', unit: '', quantity: 0, price: 0,
-                date: new Date().toISOString().slice(0, 10), category_id: '', subcategory_id: '', notes: ''
-            });
+            const data = response.data;
+            if (data.success) {
+                toast.success('Product added successfully!');
+                setShowAddProductForm(false); // Hide the form on success
+                fetchProducts();
+            }
             return { success: true };
         } catch (error) {
             console.error('Failed to add product:', error);

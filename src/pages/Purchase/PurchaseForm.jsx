@@ -1,9 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
-import { InputField, SelectField } from './FormComponents'; // Import helpers
-import ProductRow from './ProductRow'; // Import product row component
+import { toast } from 'react-toastify';
 
-// Note: Assuming API_BASE_URL is handled via environment variables in a real project
+import { InputField, SelectField } from './FormComponents';
+import ProductRow from './ProductRow';
+import AddProductModal from "../../components/AddProductModal/AddProductModal";
+import AddSupplierModal from "./AddSupplierModal"; // Assuming this is created
+
 const API_BASE_URL = 'http://localhost:5000';
 
 const initialFormState = {
@@ -13,7 +16,7 @@ const initialFormState = {
   due: 0,
   advance: 0,
   status: "pending",
-  supplier_id: null,
+  supplierId: null,
 };
 
 const PurchaseForm = () => {
@@ -30,6 +33,48 @@ const PurchaseForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
 
+  // === NEW SUPPLIER MODAL STATES ===
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [addSupplierApiInProgress, setAddSupplierApiInProgress] = useState(false);
+
+  // === EXISTING PRODUCT MODAL STATES ===
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [addProductApiInProgress, setAddProductApiInProgress] = useState(false);
+
+  // --- Data Fetch on Mount (for categories) ---
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/utilities/categories`);
+      setCategories(response?.data?.data || []);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
+
+  // --- Product Modal Handlers ---
+  const handleOpenAddProductModal = () => {
+    setShowAddProductModal(true);
+  };
+
+  const handleCloseAddProductModal = () => {
+    setNewProductName("");
+    setShowAddProductModal(false);
+  };
+
+  // --- NEW Supplier Modal Handlers ---
+  const handleOpenAddSupplierModal = () => {
+    setShowAddSupplierModal(true);
+  };
+
+  const handleCloseAddSupplierModal = () => {
+    setShowAddSupplierModal(false);
+  };
+
   // --- Calculations ---
   const totalPurchase = useMemo(() =>
     products.reduce((sum, p) => sum + (Number(p.purchase_price || 0) * Number(p.qty || 0)), 0),
@@ -38,28 +83,35 @@ const PurchaseForm = () => {
   const netBalance = useMemo(() => totalPurchase - Number(form.advance) + Number(form.due), [totalPurchase, form.advance, form.due]);
 
   const resetForm = () => {
-    // setForm(initialFormState);
     setProducts([]);
     setSupplierSearchQuery('');
     setSupplierSearchResults([]);
+    setForm(initialFormState); // Full reset for a new entry
   }
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     const newValue = type === 'number' ? Number(value) : value;
 
-    // Clear supplier ID if name/address/phone is manually changed
     if (['supplier_name', 'address', 'phone'].includes(name)) {
-      setForm({ ...form, [name]: newValue, supplier_id: null });
+      // Update the form state for display in input fields
+      setForm({ ...form, [name]: newValue, supplierId: null });
+
+      // Only update the dedicated search query state for the debouncer
+      if (name === 'supplier_name') {
+        setSupplierSearchQuery(newValue);
+      }
     } else {
       setForm({ ...form, [name]: newValue });
     }
   };
 
-  // --- Supplier Search Logic ---
+  // --- Supplier Search Logic (Debounced API Call) ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       const query = supplierSearchQuery.trim();
+
+      // Critical check: if the query is empty, stop and clear results
       if (!query) {
         setSupplierSearchResults([]);
         return;
@@ -68,7 +120,6 @@ const PurchaseForm = () => {
       setSupplierSearchLoading(true);
       try {
         const res = await axios.get(`${API_BASE_URL}/api/suppliers/search?q=${query}`);
-        console.table('supplier res', res);
         setSupplierSearchResults(res.data.data || []);
       } catch (err) {
         console.error("Supplier search failed:", err);
@@ -77,28 +128,76 @@ const PurchaseForm = () => {
         setSupplierSearchLoading(false);
       }
     }, 500);
+
+    // This cleanup function runs when the component unmounts OR when 
+    // `supplierSearchQuery` changes, cancelling the previous timer.
     return () => clearTimeout(delayDebounceFn);
   }, [supplierSearchQuery]);
 
+  // --- Supplier Selection Logic (Fixed) ---
   const handleSelectSupplier = (supplier) => {
     setForm({
       ...form,
-      supplier_id: supplier._id,
-      supplier_name: supplier.name,
+      supplierId: supplier._id,
+      supplier_name: supplier.name, // input shows selected supplier
       address: supplier.address || '',
       phone: supplier.phone || '',
       due: Number(supplier.due) || 0,
       advance: Number(supplier.advance) || 0,
       status: form.status,
     });
-    setSupplierSearchQuery(supplier.name);
-    setSupplierSearchResults([]);
+
+    // ✅ Stop clearing the search query immediately
+    setSupplierSearchResults([]); // hide dropdown
+    // Don't update supplierSearchQuery here
   };
 
-  // --- Product Management Logic ---
+
+  // 🆕 API Logic for Supplier Modal Submission
+  const saveNewSupplier = async (supplierData) => {
+    setAddSupplierApiInProgress(true);
+    try {
+      const payload = {
+        name: supplierData.name,
+        address: supplierData.address,
+        phone: supplierData.phone,
+        type: supplierData.type,
+        due: supplierData.due,
+        advance: supplierData.advance,
+      };
+
+      const res = await axios.post(`${API_BASE_URL}/api/suppliers`, payload);
+      const newSupplier = res.data.data;
+
+      toast.success(`Supplier "${newSupplier.name}" created and selected!`);
+
+      // Automatically select the newly created supplier
+      handleSelectSupplier({
+        _id: newSupplier._id,
+        name: newSupplier.name,
+        address: newSupplier.address,
+        phone: newSupplier.phone,
+        due: newSupplier.due,
+        advance: newSupplier.advance
+      });
+
+      handleCloseAddSupplierModal();
+      return { success: true };
+    } catch (err) {
+      console.error("Failed to create new supplier:", err);
+      toast.error(err.response?.data?.message || "Failed to create new supplier.");
+      throw err;
+    } finally {
+      setAddSupplierApiInProgress(false);
+    }
+  };
+
+
+  // --- Product Management Logic (Unchanged for brevity) ---
   const handleProductSearch = async (e) => {
     const query = e.target.value;
     setProductSearch(query);
+    setNewProductName(query);
 
     if (query.trim() === "") return setSearchResults([]);
 
@@ -119,22 +218,34 @@ const PurchaseForm = () => {
     if (!exists) {
       setProducts(prev => [
         ...prev,
-        { ...product, qty: 1, purchase_price: Number(product.purchase_price || 0) }
+        {
+          _id: product._id,
+          item_name: product.item_name || product.name,
+          unit: product.unit || 'pcs',
+          qty: 1,
+          purchase_price: Number(product.purchase_price || 0)
+        }
       ]);
     }
     setProductSearch("");
     setSearchResults([]);
   };
 
-  const addNewProduct = async () => {
-    if (!newProductName) return;
+  const saveNewProduct = async (productData) => {
+    setAddProductApiInProgress(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/products`, { name: newProductName });
+      const res = await axios.post(`${API_BASE_URL}/api/products`, productData);
+
+      toast.success(`Product "${res.data.data.item_name}" created and added!`);
       addProduct(res.data.data);
-      setNewProductName("");
+      handleCloseAddProductModal();
+      return { success: true };
     } catch (err) {
       console.error("Failed to create new product:", err);
-      alert("Failed to create new product.");
+      toast.error("Failed to create new product.");
+      throw err;
+    } finally {
+      setAddProductApiInProgress(false);
     }
   };
 
@@ -150,17 +261,22 @@ const PurchaseForm = () => {
     setProducts(newProducts);
   };
 
-  // --- Form Submission ---
+
+  // --- Form Submission (Unchanged) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.supplier_name.trim()) return alert("Please specify the Supplier Name.");
     if (products.length === 0) return alert("Please add at least one product to the purchase list.");
+    if (!form.supplierId) {
+      return alert("Supplier not selected. Please select an existing supplier or use the button to create a new one.");
+    }
 
     setIsSubmitting(true);
     try {
       const payload = {
         ...form,
         total_amount: totalPurchase,
+        supplier_id: form.supplierId,
         products: products.map(p => ({
           product_id: p._id,
           name: p.item_name,
@@ -170,14 +286,14 @@ const PurchaseForm = () => {
         })),
       };
 
-      console.log(payload);
+      console.log('purchasing data', payload);
 
       await axios.post(`${API_BASE_URL}/api/purchases`, payload);
-      resetForm();
-      alert("Purchase created successfully!");
+      // resetForm();
+      toast.success("Purchase created successfully!");
     } catch (err) {
       console.error("Purchase submission failed:", err);
-      alert("Failed to create purchase. Please try again.");
+      toast.error("Failed to create purchase. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -193,7 +309,6 @@ const PurchaseForm = () => {
 
           {/* === Left Column: Supplier Info and Financial Status === */}
           <div className="lg:col-span-1 space-y-6">
-
             {/* Supplier Information Card */}
             <div className="bg-white p-6 rounded-xl shadow-lg relative">
               <h2 className="text-xl font-bold text-blue-600 mb-4 border-b pb-2">Supplier Details</h2>
@@ -203,14 +318,15 @@ const PurchaseForm = () => {
                 <label className="text-sm font-medium text-gray-700 mb-1 block">Search Existing Supplier</label>
                 <input
                   type="text"
-                  value={supplierSearchQuery}
+                  value={form.supplier_name}
                   onChange={(e) => {
-                    setSupplierSearchQuery(e.target.value);
-                    if (!e.target.value.trim()) { setForm(initialFormState); }
+                    const value = e.target.value;
+                    setForm({ ...form, supplier_name: value, supplierId: null });
+                    setSupplierSearchQuery(value); // only for API search
                   }}
                   placeholder="Search by name or phone..."
-                  className="border border-gray-300 rounded-lg p-3 w-full focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 />
+
                 {supplierSearchLoading && <div className="absolute top-1/2 right-3 mt-2 transform -translate-y-1/2 text-blue-500 text-xs">...</div>}
 
                 {supplierSearchResults.length > 0 && (
@@ -229,17 +345,30 @@ const PurchaseForm = () => {
                 )}
               </div>
 
-              <div className="space-y-4 pt-4 border-t">
-                <InputField label="Supplier Name" name="supplier_name" value={form.supplier_name} onChange={handleChange} required />
-                <InputField label="Phone Number" name="phone" value={form.phone} onChange={handleChange} />
-                <InputField label="Address" name="address" value={form.address} onChange={handleChange} />
+              {/* Create New Supplier Button (Always Active as requested) */}
+              <div className="flex justify-start pt-2 border-t mt-4 mb-4">
+                <button
+                  type="button"
+                  onClick={handleOpenAddSupplierModal}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+                >
+                  Create New Supplier
+                </button>
               </div>
-              {form.supplier_id && (
-                <p className="text-xs text-green-600 mt-2 font-medium">Selected Supplier ID: {form.supplier_id}</p>
+
+
+              <div className="space-y-4 pt-4 border-t">
+                {/* These are controlled by the main input's onChange now, but kept for direct edits */}
+                <p>Supplier: {form.supplier_name}</p>
+                <p>Phone: {form.phone}</p> 
+                <p>Address: {form.address}</p> 
+              </div>
+              {form.supplierId && (
+                <p className="text-xs text-green-600 mt-2 font-medium">Selected Supplier ID: {form.supplierId}</p>
               )}
             </div>
 
-            {/* Financial Status Card */}
+            {/* Financial Status Card (Unchanged) */}
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h2 className="text-xl font-bold text-blue-600 mb-4 border-b pb-2">Financial Status</h2>
               <div className="space-y-4">
@@ -247,8 +376,6 @@ const PurchaseForm = () => {
                   <InputField label="Supplier Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} />
                   <InputField label="Your Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} />
                 </div>
-
-
                 <SelectField
                   label="Purchase Status"
                   name="status"
@@ -263,7 +390,7 @@ const PurchaseForm = () => {
             </div>
           </div>
 
-          {/* === Right Column: Products and Action === */}
+          {/* === Right Column: Products and Action (Unchanged) === */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Product Search and Add Card */}
@@ -297,31 +424,21 @@ const PurchaseForm = () => {
                 )}
               </div>
 
-              {/* Add New Product */}
-              <div className="flex gap-2 items-end pt-2 border-t mt-4">
-                <InputField
-                  label="Or Add New Product Name"
-                  name="new_product_name"
-                  value={newProductName}
-                  onChange={(e) => setNewProductName(e.target.value)}
-                  placeholder="New item name"
-                  className="flex-grow"
-                />
+              {/* Add New Product Button */}
+              <div className="flex justify-start pt-2 border-t mt-4">
                 <button
                   type="button"
-                  onClick={addNewProduct}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition"
-                  disabled={!newProductName.trim()}
+                  onClick={handleOpenAddProductModal}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
                 >
-                  Create & Add
+                  Create New Product
                 </button>
               </div>
             </div>
 
-            {/* Product List Table Card */}
+            {/* Product List Table Card and Totals Block (Unchanged for brevity) */}
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Products in Purchase</h2>
-
               {products.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 italic">No products added yet. Start searching above.</div>
               ) : (
@@ -352,7 +469,6 @@ const PurchaseForm = () => {
               )}
             </div>
 
-            {/* Totals and Action Block */}
             <div className="bg-blue-100 border-l-4 border-blue-500 p-6 rounded-xl shadow-lg">
               <div className="flex justify-between items-center text-xl font-bold text-gray-800 mb-4 border-b border-blue-200 pb-2">
                 <span>Total Purchase:</span>
@@ -368,7 +484,7 @@ const PurchaseForm = () => {
               <button
                 type="submit"
                 className="w-full mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl text-lg font-bold hover:bg-blue-700 transition disabled:opacity-50"
-                disabled={isSubmitting || products.length === 0 || !form.supplier_name.trim()}
+                disabled={isSubmitting || products.length === 0 || !form.supplier_name.trim() || !form.supplierId}
               >
                 {isSubmitting ? 'Processing Purchase...' : 'Create Purchase Order'}
               </button>
@@ -376,6 +492,23 @@ const PurchaseForm = () => {
           </div>
         </div>
       </form>
+
+      {/* === INTEGRATED ADD PRODUCT MODAL === */}
+      <AddProductModal
+        isOpen={showAddProductModal}
+        onClose={handleCloseAddProductModal}
+        apiInProgress={addProductApiInProgress}
+        categories={categories}
+        onSave={saveNewProduct}
+      />
+
+      {/* === INTEGRATED ADD SUPPLIER MODAL === */}
+      <AddSupplierModal
+        isOpen={showAddSupplierModal}
+        onClose={handleCloseAddSupplierModal}
+        apiInProgress={addSupplierApiInProgress}
+        onSave={saveNewSupplier}
+      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ const ProductRow = ({ product, index, updateProductField, removeProduct }) => {
 
   return (
     <tr className="hover:bg-blue-50/50">
-      <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
+      <td className="px-4 py-3 font-medium text-gray-900">{product.item_name}</td>
       <td className="px-4 py-3 text-center">
         <input
           type="number"
