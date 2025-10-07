@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 // Assuming you use react-router-dom for routing
-import { useParams } from 'react-router'; 
+import { useParams } from 'react-router';
 
 // Import icons from lucide-react (or your chosen library)
 import {
@@ -16,7 +16,7 @@ import {
     ArrowUpCircle,
     ArrowDownCircle,
     AlertTriangle
-} from 'lucide-react'; 
+} from 'lucide-react';
 
 // NOTE: This API base URL needs to match your backend
 const API_BASE_URL = "http://localhost:5000/api/suppliers";
@@ -31,7 +31,7 @@ const formatBalance = (due, advance) => {
         return {
             label: `Payable: ৳${absBalance}`,
             className: 'text-red-600 bg-red-50 border-red-200',
-            icon: ArrowUpCircle 
+            icon: ArrowUpCircle
         };
     } else if (balance < 0) {
         // Supplier owes us (Receivable/Advance)
@@ -77,8 +77,8 @@ const DetailRow = ({ icon: Icon, label, value, className = "" }) => (
 // ===============================================
 const SupplierDetails = () => {
     // Fetches the 'id' parameter from the URL path, e.g., /suppliers/68e29d3cdae9a34a9533ed58
-    const { id } = useParams(); 
-    
+    const { id } = useParams();
+
     const [supplier, setSupplier] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -97,7 +97,7 @@ const SupplierDetails = () => {
                 // Fetch data from the endpoint api/suppliers/:id
                 const res = await axios.get(`${API_BASE_URL}/${id}`);
                 // Assuming the backend returns the supplier object directly or under a 'data' key
-                setSupplier(res.data.data || res.data); 
+                setSupplier(res.data.data || res.data);
             } catch (err) {
                 console.error("Fetch error:", err);
                 // Check for 404 specifically
@@ -139,6 +139,10 @@ const SupplierDetails = () => {
     const balanceInfo = formatBalance(supplier.due, supplier.advance);
     const StatusIcon = supplier.status === 'active' ? CheckCircle : XOctagon;
 
+    // To get a comma and space-separated string
+    const commaSpaceSeparatedString = supplier?.supplied_products?.join(", ");
+    console.log(commaSpaceSeparatedString); // Output: "apple, banana, cherry"
+
     return (
         <div className="p-6 bg-white rounded-xl shadow-2xl border border-gray-100 max-w-4xl mx-auto">
             <header className="border-b pb-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between">
@@ -168,41 +172,46 @@ const SupplierDetails = () => {
             {/* === Core Details Grid === */}
             <h2 className="text-xl font-bold text-gray-800 mb-2 border-b pb-1">Contact & Basic Info</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pb-4 mb-4">
-                <DetailRow 
-                    icon={Phone} 
-                    label="Phone / Contact" 
+                <DetailRow
+                    icon={Phone}
+                    label="Phone / Contact"
                     value={supplier.phone || 'N/A'}
                 />
-                <DetailRow 
-                    icon={Tag} 
-                    label="Supplier Type" 
+                <DetailRow
+                    icon={Tag}
+                    label="Supplier Type"
                     value={supplier.type ? supplier.type.charAt(0).toUpperCase() + supplier.type.slice(1) : 'N/A'}
                 />
-                <DetailRow 
-                    icon={MapPin} 
-                    label="Address" 
+                <DetailRow
+                    icon={MapPin}
+                    label="Address"
                     value={supplier.address || 'N/A'}
                     className="md:col-span-2"
                 />
             </div>
-            
+
             {/* === Metadata === */}
             <h2 className="text-xl font-bold text-gray-800 mb-2 border-b pb-1">System Metadata</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                <DetailRow 
-                    icon={Clock} 
-                    label="Record Created" 
+                <DetailRow
+                    icon={Clock}
+                    label="Record Created"
                     value={formatDate(supplier.createdAt)}
                 />
-                <DetailRow 
-                    icon={Clock} 
-                    label="Last Updated" 
+                <DetailRow
+                    icon={Clock}
+                    label="Last Updated"
                     value={formatDate(supplier.updatedAt)}
                 />
-                <DetailRow 
-                    icon={DollarSign} 
-                    label="Database ID" 
+                <DetailRow
+                    icon={DollarSign}
+                    label="Database ID"
                     value={supplier._id?.$oid || 'N/A'}
+                />
+                <DetailRow
+                    icon={DollarSign}
+                    label="Supplied Products"
+                    value={commaSpaceSeparatedString || 'N/A'}
                 />
             </div>
         </div>
