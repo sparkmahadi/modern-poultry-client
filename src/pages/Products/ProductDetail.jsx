@@ -15,7 +15,7 @@ function ProductDetail() {
   const [editingProduct, setEditingProduct] = useState(false); // State for edit mode
   const [currentProduct, setCurrentProduct] = useState(null); // Data for editing
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URLL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // --- API Call Functions ---
 

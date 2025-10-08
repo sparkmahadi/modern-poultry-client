@@ -27,7 +27,7 @@ const text = {
         saveAlertMemoNo: "Please enter memo no.",
         saveAlertName: "Please enter customer name.",
         saveAlertProducts: "Add at least one product.",
-        saveSuccess: "Memo saved (console)",
+        saveSuccess: "Product is sold successfully",
         print: "Print",
         remove: "Remove",
         phone: "Phone Number", // New

@@ -8,7 +8,7 @@ import { InputField } from '../pages/Purchase/FormComponents';
 import AddProductModal from './AddProductModal/AddProductModal'; 
 
 // IMPORTANT: Define API_BASE_URL (use environment variable or default)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URLL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 const ProductSearchAndSelect = ({

@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // API Endpoint for the specific account
 // Assuming this base URL and structure is correct for your environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URLLL; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; 
 const ACCOUNT_FETCH_URL = API_BASE_URL + '/api/cash';
 const ADD_CASH_URL = API_BASE_URL + '/api/cash/add';
 const WITHDRAW_CASH_URL = API_BASE_URL + '/api/cash/withdraw';

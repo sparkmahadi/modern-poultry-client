@@ -18,7 +18,7 @@ function Products() {
 
     const [showAddProductModal, setShowAddProductModal] = useState(false); 
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URLLL;
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     // --- API Call Functions ---
 

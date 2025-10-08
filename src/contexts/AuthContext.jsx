@@ -37,7 +37,7 @@ const login = async () => {
   const getUserInfo = async (token) => {
     try {
       setLoading(true); // Set loading true while fetching user info
-      const response = await API.get(`${import.meta.env.VITE_API_BASE_URLLL}/api/auth/user`, {
+      const response = await API.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

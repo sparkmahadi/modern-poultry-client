@@ -71,6 +71,8 @@ const ProductTable = ({
           <thead>
             <tr className="bg-gray-100 text-gray-700 uppercase text-xs">
               <th className="p-3 text-left border-b border-gray-300 w-12">{t.sl}</th>
+              <th className="p-3 text-left border-b border-gray-300 w-12">current stock</th>
+              <th className="p-3 text-left border-b border-gray-300 w-12">Stock after sell</th>
               <th className="p-3 text-left border-b border-gray-300">{t.description}</th>
               <th className="p-3 text-right border-b border-gray-300 w-24">{t.qty}</th>
               <th className="p-3 text-right border-b border-gray-300 w-28">{t.price}</th>
@@ -89,6 +91,20 @@ const ProductTable = ({
               selectedProducts.map((p, idx) => (
                 <tr key={p._id} className="border-b hover:bg-yellow-50/50 transition-colors">
                   <td className="p-3 align-top text-gray-600">{idx + 1}</td>
+
+                  <td>
+                    {/* Display the Available Stock */}
+                    <span style={{ color: p.qty > p.availableStock ? 'red' : 'green', fontWeight: 'bold', }}>
+                      {p.qty > p.availableStock ? '-' : '+'}{p.availableStock}
+                    </span>
+                  </td>
+
+                  <td>
+                    {/* Display the Available Stock */}
+                    <span style={{ color: p.qty > p.availableStock ? 'red' : 'green', fontWeight: 'bold', }}>
+                      {p.availableStock - p.qty}
+                    </span>
+                  </td>
 
                   <td className="p-3 align-top">
                     <div className="font-semibold text-gray-800">{p.item_name}</div>

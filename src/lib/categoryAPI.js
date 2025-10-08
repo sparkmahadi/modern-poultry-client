@@ -4,7 +4,7 @@ import API from './api';  // Import the configured API instance
 // Function to fetch all categories
 export const getCategories = async () => {
   try {
-    const response = await API.get(`${import.meta.env.VITE_API_BASE_URLLL}/api/utilities/categories`);
+    const response = await API.get(`${import.meta.env.VITE_API_BASE_URL}/api/utilities/categories`);
     console.log(response);
     return response?.data?.data;
   } catch (error) {
@@ -17,7 +17,7 @@ export const getCategories = async () => {
 export const createCategory = async (category) => {
   console.log(category);
   try {
-    const response = await API.post(`${import.meta.env.VITE_API_BASE_URLLL}/api/utilities/categories`, category);
+    const response = await API.post(`${import.meta.env.VITE_API_BASE_URL}/api/utilities/categories`, category);
     return response.data;
   } catch (error) {
     console.error('Error creating category:', error);
@@ -28,7 +28,7 @@ export const createCategory = async (category) => {
 // Function to fetch a category by cat_id
 export const getCategoryById = async (cat_id) => {
   try {
-    const response = await API.get(`${import.meta.env.VITE_API_BASE_URLLL}/api/utilities/categories/${cat_id}`);
+    const response = await API.get(`${import.meta.env.VITE_API_BASE_URL}/api/utilities/categories/${cat_id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching category by ID:', error);
@@ -39,7 +39,7 @@ export const getCategoryById = async (cat_id) => {
 // Function to update a category by cat_id
 export const updateCategory = async (updatedCategory) => {
   try {
-    const response = await API.put(`${import.meta.env.VITE_API_BASE_URLLL}/api/utilities/categories/${updatedCategory?.cat_id}`, updatedCategory);
+    const response = await API.put(`${import.meta.env.VITE_API_BASE_URL}/api/utilities/categories/${updatedCategory?.cat_id}`, updatedCategory);
     return response.data;
   } catch (error) {
     console.error('Error updating category:', error);

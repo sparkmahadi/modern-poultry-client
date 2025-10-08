@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, XCircle, Loader, DollarSign, TrendingUp, Zap, Edit, Trash2, Save, X } from 'lucide-react';
 import axios from 'axios';
 // This assumes your API is available at '/api' relative to your frontend origin
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URLLL+'/api/inventory';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL+'/api/inventory';
 
 
 // --- InventoryViewer Component ---

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Define the API URL based on your environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URLLL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const TRANSACTIONS_API_URL = API_BASE_URL + '/api/transactions';
 
 const TransactionsList = () => {

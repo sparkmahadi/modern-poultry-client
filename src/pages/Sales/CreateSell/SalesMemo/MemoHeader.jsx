@@ -31,7 +31,7 @@ const MemoHeader = ({
       }
       // Placeholder API call for customer search
       axios
-        .get(`${import.meta.env.VITE_API_BASE_URLL}/api/customers/search?q=${encodeURIComponent(q)}`)
+        .get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${encodeURIComponent(q)}`)
         .then((res) => {
           // Assuming customer data has _id, name, address, phone
           if (res?.data?.success) setCustomerResults(res.data.data || []);

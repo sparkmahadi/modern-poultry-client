@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router';
 
 // Define the API endpoint
-const BASE_API_URL = import.meta.env.VITE_API_BASE_URLLL;
+const BASE_API_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * Utility function to format the date
