@@ -9,7 +9,7 @@ import MemoFooter from "./MemoFooter";
 import textConstants from "./memoTexts";
 import { toast } from "react-toastify";
 const MemoForm = () => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URLLL;
   const [lang, setLang] = useState("en"); // "en" or "bn"
   const t = useMemo(() => textConstants[lang], [lang]);
 

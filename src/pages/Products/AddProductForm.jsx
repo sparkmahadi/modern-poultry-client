@@ -49,7 +49,7 @@ const AddProductForm = ({ apiInProgress, fetchProducts, setApiInProgress, catego
     const addProduct = async (productData) => {
         setApiInProgress(true);
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/products`, productData);
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URLLL}/api/products`, productData);
             console.log(response);
             const data = response.data;
             if (data.success) {

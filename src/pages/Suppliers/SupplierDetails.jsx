@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 // NOTE: This API base URL needs to match your backend
-const API_BASE_URL = "http://localhost:5000/api/suppliers";
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/suppliers`;
 
 // Helper function to format the balance (copied for consistency)
 const formatBalance = (due, advance) => {

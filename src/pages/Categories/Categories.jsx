@@ -19,7 +19,7 @@ function Categories() {
     icon: 'tag',      // Default icon
   });
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URLL;
 
   // --- API Call to Fetch All Categories ---
   const fetchAllCategories = async () => {

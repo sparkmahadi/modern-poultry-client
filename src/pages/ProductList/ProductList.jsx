@@ -30,7 +30,7 @@ function ProductList() {
   const [editingProductId, setEditingProductId] = useState(null);
   const [currentProduct, setCurrentProduct] = useState(null); // Holds data of product being edited
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URLL;
 
   // --- API Call Functions ---
 

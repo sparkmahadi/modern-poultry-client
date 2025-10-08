@@ -7,7 +7,7 @@ import ProductRow from './ProductRow';
 import AddProductModal from "../../components/AddProductModal/AddProductModal";
 import AddSupplierModal from "./AddSupplierModal"; // Assuming this is created
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const initialFormState = {
   supplier_name: "",

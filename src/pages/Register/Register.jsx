@@ -21,7 +21,7 @@ export default function RegisterPage() {
         setError("");
         console.log(form);
         try {
-            const res = await API.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/register`, form);
+            const res = await API.post(`${import.meta.env.VITE_API_BASE_URLLL}/api/auth/register`, form);
             setForm({ username: "", name: "", email: "", password: "" });
             toast.success(res.data.message);
             toast.info("Please login");

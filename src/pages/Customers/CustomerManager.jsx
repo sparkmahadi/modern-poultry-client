@@ -36,7 +36,7 @@ const SelectField = ({ label, name, value, onChange, options, className = "" }) 
 );
 
 const CustomerManager = () => {
-  const API_BASE_URL = "http://localhost:5000/api/customers";
+  const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
   const initialFormState = {
     name: "",
     address: "",

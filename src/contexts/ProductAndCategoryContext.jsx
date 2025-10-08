@@ -20,7 +20,7 @@ export const ProductAndCategoryProvider = ({ children }) => {
         setLoadingProducts(true);
         setProductError(null); // Clear any previous errors
         try {
-            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`);
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URLLL}/api/products`);
             setProducts(response?.data?.data || []);
             // toast.success('Products loaded successfully!');
         } catch (err) {
@@ -39,7 +39,7 @@ export const ProductAndCategoryProvider = ({ children }) => {
         setLoadingCategories(true); // Set loading state for categories
         setCategoryError(null); // Clear any previous category errors
         try {
-            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/utilities/categories`);
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URLLL}/api/utilities/categories`);
             setCategories(response?.data?.data || []);
         } catch (err) {
             console.error('Failed to fetch categories for dropdowns:', err);

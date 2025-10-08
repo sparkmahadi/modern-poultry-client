@@ -23,7 +23,7 @@ const CustomerModal = ({ t, onClose, onCustomerAdded }) => {
     const newCustomer = { name: name.trim(), address: address.trim(), phone: phone.trim() };
 
     // Placeholder: Replace with your actual customer creation endpoint
-    axios.post("http://localhost:5000/api/customers/add", newCustomer)
+    axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/customers/add`, newCustomer)
       .then((res) => {
         setIsLoading(false);
         // Assuming the API returns the newly created customer object (e.g., with an _id)

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = 'http://localhost:5000/api/purchases'; // Adjust as needed
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`; // Adjust as needed
 
 // A basic structure for product rows to match the DB schema
 const ProductRowEditor = ({ product, index, onChange, onRemove }) => {
