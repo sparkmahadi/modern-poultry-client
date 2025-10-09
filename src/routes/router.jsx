@@ -20,6 +20,7 @@ import CashData from '../pages/Cash/CashData';
 import TransactionsList from '../pages/Transactions/TransactionsList';
 import PurchaseList from '../pages/Purchase/PurchaseList';
 import PurchaseEdit from '../pages/Purchase/PurchaseEdit';
+import CustomerDetails from '../pages/Customers/CustomerDetails';
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: '/products', element: <Products /> },
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
+      { path: '/customers/:id', element: <CustomerDetails /> },
       { path: '/cash', element: <CashData /> },
       { path: '/transactions', element: <TransactionsList /> },
       { path: '/suppliers', element: <SupplierManager /> },
