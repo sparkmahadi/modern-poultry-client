@@ -53,7 +53,7 @@ const AddProductForm = ({ apiInProgress, fetchProducts, setApiInProgress, catego
             console.log(response);
             const data = response.data;
             if (data.success) {
-                toast.success('Product added successfully!');
+                toast.success(data?.message);
                 setShowAddProductForm(false); // Hide the form on success
                 fetchProducts();
             }

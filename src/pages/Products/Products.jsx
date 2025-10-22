@@ -51,10 +51,16 @@ function Products() {
         setApiInProgress(true);
         try {
             const response = await axios.post(`${API_BASE_URL}/api/products`, productData);
-            toast.success('Product added successfully!');
-            await fetchProducts(); 
-            setShowAddProductModal(false); 
-            return { success: true };
+            console.log(response)
+            if(response?.data.success){
+                toast.success(response.data.message);
+                await fetchProducts(); 
+                setShowAddProductModal(false); 
+                return { success: true };
+            } else{
+                toast.info(response.data.message)
+                return {success: false};
+            }
         } catch (error) {
             console.error('Failed to add product:', error);
             toast.error(error.response?.data?.message || 'Failed to add product. Please try again.');

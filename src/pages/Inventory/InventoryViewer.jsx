@@ -44,7 +44,11 @@ const InventoryViewer = () => {
         items = data;
       } else if (data && Array.isArray(data.items)) {
         items = data.items;
-      } else {
+      }
+      else if ( !data?.success) {
+        items = [];
+      }
+       else {
         throw new Error("Invalid data structure received from the API. Expected an array of inventory items in the 'data' field.");
       }
       setInventory(items);

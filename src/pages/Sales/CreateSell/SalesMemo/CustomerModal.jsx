@@ -20,10 +20,10 @@ const CustomerModal = ({ t, onClose, onCustomerAdded }) => {
 
     setIsLoading(true);
 
-    const newCustomer = { name: name.trim(), address: address.trim(), phone: phone.trim() };
+    const newCustomer = { name: name.trim(), address: address.trim(), phone: phone.trim(), type: 'temporary' };
 
     // Placeholder: Replace with your actual customer creation endpoint
-    axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/customers/add`, newCustomer)
+    axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/customers`, newCustomer)
       .then((res) => {
         setIsLoading(false);
         // Assuming the API returns the newly created customer object (e.g., with an _id)
@@ -71,6 +71,12 @@ const CustomerModal = ({ t, onClose, onCustomerAdded }) => {
               placeholder={t.phonePlaceholder}
               className={inputClass}
             />
+          </div>
+          <div>
+            <label className="text-sm font-semibold block mb-1 text-gray-700">Customer Type</label>
+            <select>
+              <option value="temporary">temporary</option>
+            </select>
           </div>
           <div>
             <label className="text-sm font-semibold block mb-1 text-gray-700">{t.address}</label>
