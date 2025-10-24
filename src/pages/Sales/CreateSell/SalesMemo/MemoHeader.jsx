@@ -1,19 +1,21 @@
 // MemoHeader.jsx - UPDATED
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import CustomerModal from "./CustomerModal";
+
+
+import CustomerFormModal from "../../../Customers/CustomerFormModal";
 
 const inputClass =
   "border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition duration-150 ease-in-out print:border-none print:bg-white";
 
-const MemoHeader = ({ 
-  t, 
-  lang, 
-  setLang, 
-  memoNo, 
-  setMemoNo, 
-  date, 
-  setDate, 
+const MemoHeader = ({
+  t,
+  lang,
+  setLang,
+  memoNo,
+  setMemoNo,
+  date,
+  setDate,
   selectedCustomer, // New prop
   setSelectedCustomer // New prop
 }) => {
@@ -22,30 +24,45 @@ const MemoHeader = ({
   const [customerResults, setCustomerResults] = useState([]);
   const [customerLoading, setCustomerLoading] = useState(false);
 
-  // Debounced customer search effect
-  // useEffect(() => {
-  //   const id = setTimeout(() => {
-  //     const q = (customerSearch || "").trim();
-  //     if (!q) {
-  //       setCustomerResults([]);
-  //       return;
-  //     }
-  //     // Placeholder API call for customer search
-  //     axios
-  //       .get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${encodeURIComponent(q)}`)
-  //       .then((res) => {
-  //         // Assuming customer data has _id, name, address, phone
-  //         if (res?.data?.success) setCustomerResults(res.data.data || []);
-  //         else setCustomerResults([]);
-  //       })
-  //       .catch(() => setCustomerResults([]));
-  //   }, 300);
-  //   return () => clearTimeout(id);
-  // }, [customerSearch]);
 
 
-  
-    // --- Supplier Search Logic (Debounced API Call) ---
+    const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
+  const initialFormState = {
+    name: "",
+    address: "",
+    phone: "",
+    type: "permanent",
+    due: 0,
+    advance: 0,
+    status: "active",
+  };
+
+    const [customers, setCustomers] = useState([]);
+  const [form, setForm] = useState(initialFormState);
+  const [editingId, setEditingId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+    useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(API_BASE_URL);
+      setCustomers(res.data.data || []);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch customers.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  // --- Supplier Search Logic (Debounced API Call) ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       const query = customerSearch.trim();
@@ -72,40 +89,70 @@ const MemoHeader = ({
     // `supplierSearchQuery` changes, cancelling the previous timer.
     return () => clearTimeout(delayDebounceFn);
   }, [customerSearch]);
-  
+
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
     setCustomerResults([]);
   }
-
-  // --- Supplier Selection Logic (Fixed) ---
-  // const handleSelectSupplier = (supplier) => {
-  //   setForm({
-  //     ...form,
-  //     supplierId: supplier._id,
-  //     supplier_name: supplier.name, // input shows selected supplier
-  //     address: supplier.address || '',
-  //     phone: supplier.phone || '',
-  //     due: Number(supplier.due) || 0,
-  //     advance: Number(supplier.advance) || 0,
-  //     status: form.status,
-  //   });
-
-  //   // ✅ Stop clearing the search query immediately
-  //   setSupplierSearchResults([]); // hide dropdown
-  //   // Don't update supplierSearchQuery here
-  // };
-
 
   const handleCustomerAdded = (customer) => {
     setSelectedCustomer(customer);
     setCustomerSearch(customer.name);
   }
 
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    // Ensure numerical inputs are parsed correctly
+    const newValue = type === 'number' ? Number(value) : value;
+    setForm({ ...form, [name]: newValue });
+  };
+
+  // Modified to close the modal as well
+  const resetForm = () => {
+    setForm(initialFormState);
+    setEditingId(null);
+    setIsModalOpen(false); // Close the modal
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (editingId) {
+        await axios.put(`${API_BASE_URL}/${editingId}`, form);
+      } else {
+        await axios.post(API_BASE_URL, form);
+      }
+      resetForm(); // Closes modal, resets form, and clears editingId
+      fetchCustomers();
+    } catch (err) {
+      console.error(err);
+      // Ensure numerical fields are not empty strings before sending
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError(`Failed to ${editingId ? 'update' : 'add'} customer.`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
-      {isModalOpen && <CustomerModal t={t} onClose={() => setIsModalOpen(false)} onCustomerAdded={handleCustomerAdded} />}
-
+      {/* Customer Form Modal Instance */}
+      <CustomerFormModal
+        isOpen={isModalOpen}
+        onClose={resetForm}
+        form={form}
+        editingId={editingId}
+        isLoading={isLoading}
+        error={error} // Pass error to modal for localized error display
+        handleChange={handleChange}
+        handleSubmit={handleSubmit}
+        resetForm={resetForm}
+      />
       {/* Header - Modern Look (same as before) */}
       <div className="bg-blue-600 text-white p-6 flex flex-col md:flex-row items-center justify-between print-header">
         {/* Shop Info */}
@@ -150,57 +197,57 @@ const MemoHeader = ({
         <label className="text-sm font-semibold block mb-1 text-gray-700">
           {t.name} <span className="text-red-500">*</span>
         </label>
-        
-        <div className="flex gap-3 items-start">
-            {/* Customer Search Field */}
-            <div className="flex-1 relative">
-                <input
-                    value={selectedCustomer?.name || customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value);
-                      if (selectedCustomer) setSelectedCustomer(null); // Clear selected customer on new search
-                    }}
-                    placeholder={t.searchCustomerPlaceholder}
-                    className={inputClass}
-                />
-                
-                {customerResults.length > 0 && (
-                    <ul className="absolute z-40 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {customerResults.map((c) => (
-                            <li
-                                key={c._id}
-                                onClick={() => handleSelectCustomer(c)}
-                                className="p-3 cursor-pointer hover:bg-blue-50 border-b flex justify-between items-center transition-colors"
-                            >
-                                <span className="font-medium text-gray-800">{c.name}</span>
-                                <span className="text-sm text-gray-600">{c.phone}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
 
-            {/* Add New Customer Button */}
-            <button 
-                onClick={() => setIsModalOpen(true)}
-                className="no-print bg-green-500 text-white text-sm px-4 py-2 rounded-lg shadow hover:bg-green-600 transition-colors flex items-center gap-1"
-            >
-                {t.addNewCustomer}
-            </button>
+        <div className="flex gap-3 items-start">
+          {/* Customer Search Field */}
+          <div className="flex-1 relative">
+            <input
+              value={selectedCustomer?.name || customerSearch}
+              onChange={(e) => {
+                setCustomerSearch(e.target.value);
+                if (selectedCustomer) setSelectedCustomer(null); // Clear selected customer on new search
+              }}
+              placeholder={t.searchCustomerPlaceholder}
+              className={inputClass}
+            />
+
+            {customerResults.length > 0 && (
+              <ul className="absolute z-40 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {customerResults.map((c) => (
+                  <li
+                    key={c._id}
+                    onClick={() => handleSelectCustomer(c)}
+                    className="p-3 cursor-pointer hover:bg-blue-50 border-b flex justify-between items-center transition-colors"
+                  >
+                    <span className="font-medium text-gray-800">{c.name}</span>
+                    <span className="text-sm text-gray-600">{c.phone}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Add New Customer Button */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="no-print bg-green-500 text-white text-sm px-4 py-2 rounded-lg shadow hover:bg-green-600 transition-colors flex items-center gap-1"
+          >
+            {t.addNewCustomer}
+          </button>
         </div>
 
         {/* Display selected customer details (read-only for print) */}
         {selectedCustomer && (
-            <div className="mt-3 p-3 bg-white border rounded-lg print-info-grid">
-                <div className="flex flex-col">
-                    <span className="text-xs font-medium text-gray-500">{t.phone}:</span>
-                    <span className="font-semibold">{selectedCustomer.phone || t.notAvailable}</span>
-                </div>
-                <div className="flex flex-col">
-                    <span className="text-xs font-medium text-gray-500">{t.address}:</span>
-                    <span className="font-semibold">{selectedCustomer.address || t.notAvailable}</span>
-                </div>
+          <div className="mt-3 p-3 bg-white border rounded-lg print-info-grid">
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-gray-500">{t.phone}:</span>
+              <span className="font-semibold">{selectedCustomer.phone || t.notAvailable}</span>
             </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-gray-500">{t.address}:</span>
+              <span className="font-semibold">{selectedCustomer.address || t.notAvailable}</span>
+            </div>
+          </div>
         )}
       </div>
     </>
