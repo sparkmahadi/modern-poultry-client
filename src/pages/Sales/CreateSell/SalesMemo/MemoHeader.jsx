@@ -20,33 +20,82 @@ const MemoHeader = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
 
   // Debounced customer search effect
+  // useEffect(() => {
+  //   const id = setTimeout(() => {
+  //     const q = (customerSearch || "").trim();
+  //     if (!q) {
+  //       setCustomerResults([]);
+  //       return;
+  //     }
+  //     // Placeholder API call for customer search
+  //     axios
+  //       .get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${encodeURIComponent(q)}`)
+  //       .then((res) => {
+  //         // Assuming customer data has _id, name, address, phone
+  //         if (res?.data?.success) setCustomerResults(res.data.data || []);
+  //         else setCustomerResults([]);
+  //       })
+  //       .catch(() => setCustomerResults([]));
+  //   }, 300);
+  //   return () => clearTimeout(id);
+  // }, [customerSearch]);
+
+
+  
+    // --- Supplier Search Logic (Debounced API Call) ---
   useEffect(() => {
-    const id = setTimeout(() => {
-      const q = (customerSearch || "").trim();
-      if (!q) {
+    const delayDebounceFn = setTimeout(async () => {
+      const query = customerSearch.trim();
+
+      // Critical check: if the query is empty, stop and clear results
+      if (!query) {
         setCustomerResults([]);
         return;
       }
-      // Placeholder API call for customer search
-      axios
-        .get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${encodeURIComponent(q)}`)
-        .then((res) => {
-          // Assuming customer data has _id, name, address, phone
-          if (res?.data?.success) setCustomerResults(res.data.data || []);
-          else setCustomerResults([]);
-        })
-        .catch(() => setCustomerResults([]));
-    }, 300);
-    return () => clearTimeout(id);
+
+      setCustomerLoading(true);
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${query}`);
+        setCustomerResults(res.data.data || []);
+      } catch (err) {
+        console.error("Supplier search failed:", err);
+        setCustomerResults([]);
+      } finally {
+        setCustomerLoading(false);
+      }
+    }, 500);
+
+    // This cleanup function runs when the component unmounts OR when 
+    // `supplierSearchQuery` changes, cancelling the previous timer.
+    return () => clearTimeout(delayDebounceFn);
   }, [customerSearch]);
   
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
-    setCustomerSearch(customer.name); // Keep selected name in the box
     setCustomerResults([]);
   }
+
+  // --- Supplier Selection Logic (Fixed) ---
+  // const handleSelectSupplier = (supplier) => {
+  //   setForm({
+  //     ...form,
+  //     supplierId: supplier._id,
+  //     supplier_name: supplier.name, // input shows selected supplier
+  //     address: supplier.address || '',
+  //     phone: supplier.phone || '',
+  //     due: Number(supplier.due) || 0,
+  //     advance: Number(supplier.advance) || 0,
+  //     status: form.status,
+  //   });
+
+  //   // ✅ Stop clearing the search query immediately
+  //   setSupplierSearchResults([]); // hide dropdown
+  //   // Don't update supplierSearchQuery here
+  // };
+
 
   const handleCustomerAdded = (customer) => {
     setSelectedCustomer(customer);
