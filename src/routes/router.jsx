@@ -21,6 +21,9 @@ import TransactionsList from '../pages/Transactions/TransactionsList';
 import PurchaseList from '../pages/Purchase/PurchaseList';
 import PurchaseEdit from '../pages/Purchase/PurchaseEdit';
 import CustomerDetails from '../pages/Customers/CustomerDetails';
+import DailySales from '../pages/Sales/DailySales';
+import DailyCashSales from '../pages/Sales/DailyCashSales';
+import DailyDueSales from '../pages/Sales/DailyDueSales';
 
 const router = createBrowserRouter([
   {
@@ -43,6 +46,9 @@ const router = createBrowserRouter([
       { path: "/products/details/:id", element: <ProductDetail /> },
       { path: '/categories/:id', element: <CategoryDetail /> },
       { path: '/sales', element: <SalesList /> },
+      { path: '/sales/daily-sales', element: <DailySales /> },
+      { path: '/sales/daily-cash-sales', element: <DailyCashSales /> },
+      { path: '/sales/daily-due-sales', element: <DailyDueSales /> },
       { path: '/sales/create-sale', element: <CreateSell /> },
       { path: '/purchases', element: <PurchaseList /> },
       { path: '/purchases/create', element: <PurchaseForm /> },
