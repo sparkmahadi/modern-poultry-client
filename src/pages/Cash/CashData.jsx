@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Clock, NotebookText, AlertTriangle, Loader, XCircle, Plus, Minus, Send, X } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 // API Endpoint for the specific account
 // Assuming this base URL and structure is correct for your environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ACCOUNT_FETCH_URL = API_BASE_URL + '/api/cash';
 const ADD_CASH_URL = API_BASE_URL + '/api/cash/add';
 const WITHDRAW_CASH_URL = API_BASE_URL + '/api/cash/withdraw';
@@ -14,7 +15,7 @@ const CashData = () => {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // State for the transaction modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [transactionType, setTransactionType] = useState(null); // 'add' or 'withdraw'
@@ -26,7 +27,7 @@ const CashData = () => {
   const fetchAccountData = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await axios.get(ACCOUNT_FETCH_URL);
       // Ensure we handle the array of data and pick the first item as expected
@@ -66,39 +67,60 @@ const CashData = () => {
     const amount = parseFloat(transactionAmount);
 
     if (isNaN(amount) || amount <= 0) {
-        setError("Please enter a valid amount greater than zero.");
-        setIsProcessing(false);
-        return;
+      setError("Please enter a valid amount greater than zero.");
+      setIsProcessing(false);
+      return;
     }
 
     const payload = {
-        amount,
-        remarks: transactionRemarks || (transactionType === 'add' ? "Manual Deposit" : "Manual Withdrawal"),
-        created_by: "CashDataComponentUser" // Default user for component
+      amount,
+      remarks: transactionRemarks || (transactionType === 'add' ? "Manual Deposit" : "Manual Withdrawal"),
+      created_by: "CashDataComponentUser" // Default user for component
     };
 
     try {
-        const res = await axios.post(url, payload);
-        
-        // Success: Refetch data to show updated balance
-        await fetchAccountData();
-        
-        alert(res.data.message);
-        closeModal();
+      const res = await axios.post(url, payload);
+
+      // Success: Refetch data to show updated balance
+      await fetchAccountData();
+
+      alert(res.data.message);
+      closeModal();
     } catch (err) {
-        console.error("Transaction failed:", err);
-        const errorMessage = err.response?.data?.message || err.message;
-        setError(`Transaction failed: ${errorMessage}`);
+      console.error("Transaction failed:", err);
+      const errorMessage = err.response?.data?.message || err.message;
+      setError(`Transaction failed: ${errorMessage}`);
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
 
-  // --- Utility Functions for Rendering ---
-  const { name, currency, last_updated, remarks, balance, current_balance } = accountData || {};
+  const handleCreateCash = async() => {
+    const confirm = window.confirm("Do you want to create a new cash account?");
+    if (confirm) {
+      const cashInfo = {
+        _id: "cash_001",
+        name: "Main Cash Account",
+        currency: "BDT",
+        remarks: "Main farm cash account",
+        balance: 0,
+        current_balance: 0
+      };
 
-  const formattedDate = last_updated 
-    ? new Date(last_updated).toLocaleString() 
+      const res = await axios.post(`${API_BASE_URL}/api/cash`, cashInfo);
+      if(res.data.success){
+        toast.success("Acc created successfully!!!");
+      } else{
+        toast.info("Not succeeded!")
+      }
+    }
+  }
+
+  // --- Utility Functions for Rendering ---
+  const { name, currency, last_updated, remarks, balance, current_balance, acc_payable, acc_receivable } = accountData || {};
+
+  const formattedDate = last_updated
+    ? new Date(last_updated).toLocaleString()
     : 'N/A';
 
   const formattedBalance = balance?.toLocaleString('en-US', {
@@ -131,18 +153,23 @@ const CashData = () => {
   }
 
   if (!accountData) {
-      return (
-          <div className="max-w-md mx-auto mt-10 p-6 text-center bg-yellow-50 rounded-xl shadow-lg border-t-4 border-yellow-500">
-              <AlertTriangle className="w-8 h-8 text-yellow-600 mx-auto" />
-              <p className="mt-2 text-yellow-800 font-semibold">No account data available.</p>
-          </div>
-      );
+    return (
+      <div className="max-w-md mx-auto mt-10 p-6 text-center bg-yellow-50 rounded-xl shadow-lg border-t-4 border-yellow-500">
+        <AlertTriangle className="w-8 h-8 text-yellow-600 mx-auto" />
+        <p className="mt-2 text-yellow-800 font-semibold">No account data available.</p>
+
+        
+
+
+      <div><button onClick={handleCreateCash}>Create Cash Account</button></div>
+      </div>
+    );
   }
 
   // --- Main Render ---
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600 font-sans">
-      
+
       {/* Error Alert for Transactions */}
       {error && (
         <div className="flex items-start p-3 mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
@@ -157,7 +184,7 @@ const CashData = () => {
           {name}
         </h1>
         <div className={`px-3 py-1 text-xs font-bold rounded-full text-white ${currency === 'BDT' ? 'bg-green-600' : 'bg-gray-600'}`}>
-            {currency}
+          {currency}
         </div>
       </div>
 
@@ -187,28 +214,40 @@ const CashData = () => {
 
       {/* Details Section */}
       <div className="space-y-3">
-        
-        <DataRow 
-          icon={DollarSign} 
-          label="Primary Balance" 
-          value={balance?.toLocaleString() || 'N/A'} 
+
+        <DataRow
+          icon={DollarSign}
+          label="Primary Balance"
+          value={balance?.toLocaleString() || 'N/A'}
         />
-        
-        <DataRow 
-          icon={Clock} 
-          label="Last Updated" 
-          value={formattedDate} 
+
+        <DataRow
+          icon={DollarSign}
+          label="Accounts Payable"
+          value={acc_payable?.toLocaleString() || 'N/A'}
         />
-        
+
+        <DataRow
+          icon={DollarSign}
+          label="Accounts Receivable"
+          value={acc_receivable?.toLocaleString() || 'N/A'}
+        />
+
+        <DataRow
+          icon={Clock}
+          label="Last Updated"
+          value={formattedDate}
+        />
+
         {/* Remarks/Description Row */}
         <div className="text-gray-700 pt-2 border-t border-gray-100">
-            <div className="flex items-start">
-                <NotebookText className="w-5 h-5 text-indigo-500 mr-3 mt-1 flex-shrink-0" />
-                <div className='flex flex-col'>
-                    <span className="font-medium text-sm">Remarks:</span>
-                    <span className="text-sm italic text-gray-600 mt-1">{remarks || 'No remarks provided.'}</span>
-                </div>
+          <div className="flex items-start">
+            <NotebookText className="w-5 h-5 text-indigo-500 mr-3 mt-1 flex-shrink-0" />
+            <div className='flex flex-col'>
+              <span className="font-medium text-sm">Remarks:</span>
+              <span className="text-sm italic text-gray-600 mt-1">{remarks || 'No remarks provided.'}</span>
             </div>
+          </div>
         </div>
 
         {/* Invalid Balance Alert */}
@@ -226,7 +265,7 @@ const CashData = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
           <form onSubmit={handleTransactionSubmit} className="bg-white rounded-lg shadow-2xl w-full max-w-sm mx-auto">
-            
+
             {/* Modal Header */}
             <div className={`flex justify-between items-center border-b p-4 rounded-t-lg 
                             ${transactionType === 'add' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -240,7 +279,7 @@ const CashData = () => {
 
             {/* Modal Body/Form */}
             <div className="p-6 space-y-4">
-              
+
               {/* Amount Input */}
               <div>
                 <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Amount ({currency || 'USD'})</label>
@@ -282,15 +321,14 @@ const CashData = () => {
               </button>
               <button
                 type="submit"
-                className={`px-4 py-2 text-white rounded-md transition duration-150 flex items-center ${
-                    transactionType === 'add' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-                }`}
+                className={`px-4 py-2 text-white rounded-md transition duration-150 flex items-center ${transactionType === 'add' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                  }`}
                 disabled={isProcessing}
               >
                 {isProcessing ? (
-                    <Loader className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader className="w-5 h-5 mr-2 animate-spin" />
                 ) : (
-                    <Send className="w-5 h-5 mr-2" />
+                  <Send className="w-5 h-5 mr-2" />
                 )}
                 {isProcessing ? 'Processing...' : (transactionType === 'add' ? 'Confirm Deposit' : 'Confirm Withdrawal')}
               </button>
@@ -298,6 +336,9 @@ const CashData = () => {
           </form>
         </div>
       )}
+
+
+      <div><button onClick={handleCreateCash}>Create Cash Account</button></div>
     </div>
   );
 };
