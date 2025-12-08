@@ -24,6 +24,7 @@ import CustomerDetails from '../pages/Customers/CustomerDetails';
 import DailySales from '../pages/Sales/DailySales';
 import DailyCashSales from '../pages/Sales/DailyCashSales';
 import DailyDueSales from '../pages/Sales/DailyDueSales';
+import DueList from '../pages/Purchase/DueLIst/DueLIst';
 
 const router = createBrowserRouter([
   {
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
       { path: '/purchases', element: <PurchaseList /> },
       { path: '/purchases/create', element: <PurchaseForm /> },
       { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
+      { path: '/purchases/due-list', element: <DueList /> },
     ],
     // errorElement: <ErrorPage />,
   },

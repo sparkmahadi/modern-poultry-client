@@ -3,9 +3,9 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`; // Adjust as needed
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases?type=due`; // Adjust as needed
 
-const PurchaseList = () => {
+const DueList = () => {
     const [purchases, setPurchases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -51,6 +51,11 @@ const PurchaseList = () => {
 
     }
 
+    const totalDue = purchases.reduce((sum, item) => sum + item.payment_due, 0);
+
+    console.log(totalDue);
+
+
     if (loading) {
         return <div className="p-8 text-center text-xl">Loading Purchases... 🔄</div>;
     }
@@ -77,7 +82,7 @@ const PurchaseList = () => {
                 </Link>
             </div>
 
-            {purchases.length === 0 ? (
+            {purchases?.length === 0 ? (
                 <div className="bg-yellow-100 p-4 rounded-lg text-yellow-800 border border-yellow-300">
                     No purchase records found.
                 </div>
@@ -139,10 +144,12 @@ const PurchaseList = () => {
                             ))}
                         </tbody>
                     </table>
+
+                    <h3>Total Due: {totalDue}</h3>
                 </div>
             )}
         </div>
     );
 };
 
-export default PurchaseList;
+export default DueList;
