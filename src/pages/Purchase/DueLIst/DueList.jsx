@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases?type=due`; // Adjust as needed
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`; // Adjust as needed
 
 const DueList = () => {
     const [purchases, setPurchases] = useState([]);
@@ -11,11 +11,16 @@ const DueList = () => {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedPurchase, setSelectedPurchase] = useState(null);
+    const [paymentAmount, setPaymentAmount] = useState("");
+
+
     const fetchPurchases = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get(API_BASE_URL);
+            const response = await axios.get(`${API_BASE_URL}/?type=due`);
             // Assuming the controller returns { success: true, data: purchases }
             setPurchases(response.data.data);
         } catch (err) {
@@ -47,13 +52,58 @@ const DueList = () => {
         }
     };
 
-    const handlePaySupplierDue = async () => {
+    const handlePaySupplierDue = (purchase) => {
+        setSelectedPurchase(purchase);
+        setPaymentAmount("");
+        setShowPaymentModal(true);
+    };
 
+const handleSubmitPayment = async () => {
+    const pay = Number(paymentAmount);
+    const paymentMethod = "cash";
+    const due = remainingDue;
+
+    if (!pay || pay <= 0) {
+        return toast.error("Enter a valid payment amount.");
     }
 
-    const totalDue = purchases.reduce((sum, item) => sum + item.payment_due, 0);
+    if (pay > due) {
+        return toast.error("Payment cannot exceed remaining due!");
+    }
 
-    console.log(totalDue);
+    try {
+        const response = await axios.patch(
+            `${API_BASE_URL}/pay/${selectedPurchase._id}`,
+            {
+                payAmount: pay,
+                paymentMethod: paymentMethod || "cash"  // optional dropdown later
+            }
+        );
+
+        const updated = response.data.data;
+
+        // Update UI instantly
+        setPurchases(prev =>
+            prev.map(p =>
+                p._id === selectedPurchase._id
+                    ? { ...p, paidAmount: updated.paidAmount }
+                    : p
+            )
+        );
+
+        toast.success("Payment recorded successfully!");
+        setShowPaymentModal(false);
+
+    } catch (err) {
+        console.error("Payment update failed:", err);
+        toast.error(err.response?.data?.message || "Failed to update payment.");
+    }
+};
+
+
+
+
+
 
 
     if (loading) {
@@ -63,6 +113,15 @@ const DueList = () => {
     if (error) {
         return <div className="p-8 text-center text-red-600 font-semibold">Error: {error}</div>;
     }
+
+    const totalDue = purchases.reduce((sum, item) => sum + item.payment_due, 0);
+    const remainingDue = selectedPurchase
+        ? Number(selectedPurchase.totalAmount) - Number(selectedPurchase.paidAmount)
+        : 0;
+
+    const updatedRemainingDue = selectedPurchase
+        ? remainingDue - Number(paymentAmount || 0)
+        : 0;
 
     return (
         <div className="container mx-auto p-4">
@@ -121,11 +180,12 @@ const DueList = () => {
                                         {
                                             Number(purchase.totalAmount - purchase.paidAmount || 0).toFixed(2) > 0 &&
                                             <button
-                                                onClick={() => handlePaySupplierDue(purchase._id)}
+                                                onClick={() => handlePaySupplierDue(purchase)}
                                                 className="text-red-600 hover:text-red-900 transition ml-4"
                                             >
                                                 Pay
                                             </button>
+
                                         }
                                         <Link
                                             to={`/purchases/edit/${purchase._id}`}
@@ -148,6 +208,70 @@ const DueList = () => {
                     <h3>Total Due: {totalDue}</h3>
                 </div>
             )}
+
+
+            {/* modal */}
+            {showPaymentModal && selectedPurchase && (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-xl font-bold mb-4">Pay Supplier Due</h2>
+
+            <div className="space-y-2 mb-4">
+                <p><strong>Total Amount:</strong> ৳{selectedPurchase.totalAmount}</p>
+                <p><strong>Paid Already:</strong> ৳{selectedPurchase.paidAmount}</p>
+                <p><strong>Current Due:</strong> ৳{remainingDue}</p>
+
+                {/* LIVE UPDATED REMAINING DUE */}
+                {paymentAmount && (
+                    <p
+                        className={`font-semibold ${
+                            updatedRemainingDue < 0 ? "text-red-600" : "text-green-700"
+                        }`}
+                    >
+                        Remaining After Payment: ৳{updatedRemainingDue.toFixed(2)}
+                    </p>
+                )}
+            </div>
+
+            <input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Enter payment amount"
+                className="w-full p-2 border rounded mb-4"
+            />
+
+            {/* Error message if pay > due */}
+            {paymentAmount > remainingDue && (
+                <p className="text-red-600 text-sm mb-3">
+                    Payment cannot exceed remaining due!
+                </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-4">
+                <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    onClick={handleSubmitPayment}
+                    disabled={paymentAmount > remainingDue}
+                    className={`px-4 py-2 rounded text-white ${
+                        paymentAmount > remainingDue
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                >
+                    Pay
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+
         </div>
     );
 };

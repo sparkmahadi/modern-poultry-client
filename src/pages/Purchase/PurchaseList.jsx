@@ -59,6 +59,15 @@ const PurchaseList = () => {
         return <div className="p-8 text-center text-red-600 font-semibold">Error: {error}</div>;
     }
 
+
+    // Calculate totals
+    const totalPurchased = purchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+
+    const totalPaid = purchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+
+    const totalDue = purchases.reduce((sum, p) => sum + ((p.totalAmount || 0) - (p.paidAmount || 0)), 0);
+
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-3xl font-bold mb-6 text-gray-800">Purchase History</h1>
@@ -83,6 +92,24 @@ const PurchaseList = () => {
                 </div>
             ) : (
                 <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="p-4 bg-blue-100 rounded-lg text-center">
+                            <h3 className="font-semibold text-gray-700">Total Purchased</h3>
+                            <p className="text-2xl font-bold">৳{totalPurchased.toFixed(2)}</p>
+                        </div>
+
+                        <div className="p-4 bg-green-100 rounded-lg text-center">
+                            <h3 className="font-semibold text-gray-700">Total Paid</h3>
+                            <p className="text-2xl font-bold">৳{totalPaid.toFixed(2)}</p>
+                        </div>
+
+                        <Link to="/purchases/due-list" className="p-4 bg-red-100 rounded-lg text-center">
+                            <h3 className="font-semibold text-gray-700">Total Due</h3>
+                            <p className="text-2xl font-bold">৳{totalDue.toFixed(2)}</p>
+                        </Link>
+                    </div>
+
+
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>

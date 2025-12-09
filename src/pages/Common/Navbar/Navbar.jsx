@@ -52,11 +52,13 @@ const Navbar = () => {
 
   const navItems = [
     { name: t.dashboard, icon: LayoutDashboard, href: '/dashboard' },
-    { name: t.products, icon: Package, href: '/products' },
+    // { name: t.products, icon: Package, href: '/products' },
     { name: t.suppliers, icon: List, href: '/suppliers' },
     { name: t.customers, icon: List, href: '/customers' },
     { name: t.sales, icon: List, href: '/sales' },
     { name: t.purchases, icon: List, href: '/purchases' },
+    { name: "Trans", icon: List, href: '/transactions' },
+    { name: "Cash", icon: List, href: '/cash' },
   ];
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
