@@ -30,6 +30,7 @@ const translations = {
         purchases: "Purchases",
         transactions: "Transactions",
         cash: "Cash",
+        batches: "Batches",
         reports: "Reports",
         keyMetrics: "Key Performance Metrics",
         quickNav: "Quick Navigation",
@@ -53,6 +54,7 @@ const translations = {
         quickNav: "দ্রুত নেভিগেশন",
         welcome: "আপনার ম্যানেজমেন্ট কন্ট্রোল সেন্টারে স্বাগতম।",
         appName: "অ্যাপ ড্যাশবোর্ড",
+        batches: "Batches",
         appTitle: "📊 অ্যাপ সিআরএম",
     },
 };
@@ -76,6 +78,7 @@ const Dashboard = () => {
         { name: t.transactions, icon: ClipboardList, href: "/transactions", description: "Generate business insights and data reports." },
         { name: t.cash, icon: ClipboardList, href: "/cash", description: "Manage your cash flow and balance." },
         { name: t.reports, icon: ClipboardList, href: "/reports", description: "Generate business insights and data reports." },
+        { name: t.batches, icon: ClipboardList, href: "/farm-batches", description: "Generate business insights and data reports." },
     ];
 
     const NavItem = ({ item }) => {

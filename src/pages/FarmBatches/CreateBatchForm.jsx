@@ -60,6 +60,7 @@ const CreateBatchForm = ({ batchData = null, onSuccess }) => {
             ...formData,
             farmer: selectedFarmer.name,
             farmerId: selectedFarmer._id,
+            active: true,
         };
 
         try {

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useParams } from 'react-router';
+import MemoForm from './MemoForm';
 
 // Configuration (Replace with your actual configuration method)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -40,6 +41,8 @@ const BatchDetails = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    const [showSaleMemo, setShowSaleMemo] = useState(false);
 
     // --- Data Fetching ---
     const fetchBatchData = useCallback(async () => {
@@ -139,11 +142,13 @@ console.log(response);
     const ViewDetails = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <DetailItem label="Batch ID" value={batchData._id.$oid || batchData._id} />
+            <DetailItem label="Farmer/Customer ID" value={batchData.farmerId} />
             <DetailItem label="Farmer" value={batchData.farmer} />
             <DetailItem label="Chicks Quantity" value={batchData.chicksQuantity} />
             <DetailItem label="Chicks Breed" value={batchData.chicksBreed} />
             <DetailItem label="Feed Assigned (kg)" value={batchData.feedAssigned} />
             <DetailItem label="Start Date" value={batchData.startDate} />
+            <DetailItem label="Batch Status" value={batchData.active} />
             <DetailItem label="Expected End Date" value={batchData.expectedEndDate || 'N/A'} />
             <DetailItem label="Medicines" value={batchData.medicines || 'None'} fullWidth />
             <DetailItem label="Notes" value={batchData.notes || 'None'} fullWidth />
@@ -165,21 +170,12 @@ console.log(response);
                 
                 {/* Farmer Selection (Dropdown) */}
                 <div>
-                    <label htmlFor="farmer" className="block text-sm font-medium text-gray-700">Farmer <span className="text-red-500">*</span></label>
-                    <select
-                        id="farmer"
-                        name="farmer"
-                        value={formData.farmer}
-                        onChange={handleChange}
-                        required
+                    <p className="block text-sm font-medium text-gray-700">Farmer <span className="text-red-500">*</span></p>
+                    <p
+                        value={batchData.farmer}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                        disabled={submitting}
                     >
-                        <option value="">Select Farmer...</option>
-                        {/* Placeholder options, replace with API fetched data */}
-                        <option value="epon">epon</option> 
-                        <option value="John Doe">John Doe</option>
-                    </select>
+                    </p>
                 </div>
 
                 {/* Chicks Quantity */}
@@ -325,9 +321,18 @@ console.log(response);
                 ) : (
                     <span className="text-sm text-gray-500">Editing Mode</span>
                 )}
+
+                <button
+                        onClick={()=>setShowSaleMemo(!showSaleMemo)}
+                        className="py-2 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                    >
+                        Sell Products
+                    </button>
             </div>
 
             {isEditing ? <EditForm /> : <ViewDetails />}
+
+            {showSaleMemo && <MemoForm batchData={batchData}/>}
         </div>
     );
 };
