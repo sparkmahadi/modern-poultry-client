@@ -10,10 +10,9 @@ import ProductTable from "./ProductTable"; // Ensure this component is updated t
 import MemoFooter from "./MemoFooter";
 import textConstants from "./memoTexts";
 
-const MemoForm = ({batchData}) => {
-    console.log(batchData);
-    const selectedCustomer = batchData.farmerId;
+const SellToBatchMemoForm = ({ batchData, selectedCustomer }) => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    console.log(batchData, selectedCustomer);
     const [lang, setLang] = useState("en");
     const t = useMemo(() => textConstants[lang], [lang]);
 
@@ -60,7 +59,7 @@ const MemoForm = ({batchData}) => {
     };
 
     // --- Product Manipulation Logic ---
-    const addProduct = async (product) => {
+    const addProductToMemo = async (product) => {
         if (isCheckingStock) return;
 
         const exists = selectedProducts.find((p) => p._id === product._id);
@@ -94,13 +93,13 @@ const MemoForm = ({batchData}) => {
             const price = Number(product.price) || 0;
             setSelectedProducts([
                 ...selectedProducts,
-                { 
-                    ...product, 
-                    qty: requestedQty, 
-                    price, 
+                {
+                    ...product,
+                    qty: requestedQty,
+                    price,
                     subtotal: price * requestedQty,
                     // 🔑 NEW: Store the available stock for display 
-                    availableStock: availableStock, 
+                    availableStock: availableStock,
                 },
             ]);
 
@@ -176,18 +175,45 @@ const MemoForm = ({batchData}) => {
         };
 
         console.log("SAVE MEMO PAYLOAD", payload);
+
         try {
-            const result = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
-            const data = result.data;
-            if (data.success) {
-                toast.success(t.saveSuccess);
+            // Step 1: Create Sale
+            const saleRes = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
+            const saleData = saleRes.data;
+
+            if (saleData.success) {
+                toast.success("Sale memo created successfully");
+
+                const memoId = saleData.memoId;
+                const batchId = batchData._id; // You said batchId comes from frontend
+
+                // Step 2: Attach sale to batch
+                try {
+                    const histRes = await axios.post(
+                        `${API_BASE_URL}/api/batches/add-sell-history`,
+                        { memoId, batchId }
+                    );
+
+                    if (histRes.data.success) {
+                        toast.success("Batch updated with sale history");
+                    } else {
+                        toast.error(histRes.data.message || "Batch update failed");
+                    }
+
+                } catch (err) {
+                    console.error("Batch update failed:", err);
+                    toast.error("Failed to update batch history");
+                }
+
             } else {
-                toast.error(data.message || "Not created")
+                toast.error(saleData.message || "Sale not created");
             }
+
         } catch (error) {
             console.error("Save failed:", error);
-            toast.error("Failed to save memo. Check console for details.");
+            toast.error("Failed to save sale memo. Check console for details.");
         }
+
     };
 
     // --- Render ---
@@ -221,7 +247,7 @@ const MemoForm = ({batchData}) => {
                     search={search}
                     setSearch={setSearch}
                     searchResults={searchResults}
-                    addProduct={addProduct}
+                    addProduct={addProductToMemo}
                     selectedProducts={selectedProducts}
                     removeProduct={removeProduct}
                     updateQty={updateQty}
@@ -242,4 +268,4 @@ const MemoForm = ({batchData}) => {
     );
 };
 
-export default MemoForm;
+export default SellToBatchMemoForm;

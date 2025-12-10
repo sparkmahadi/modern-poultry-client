@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useParams } from 'react-router';
-import MemoForm from './MemoForm';
+import SellToBatchMemoForm from './SellToBatchMemoForm';
+import BatchSalesHistory from './BatchSalesHistory';
 
 // Configuration (Replace with your actual configuration method)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -43,6 +44,7 @@ const BatchDetails = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const [showSaleMemo, setShowSaleMemo] = useState(false);
+    const [showSalesToBatch, setShowSalesToBatch] = useState(false);
 
     // --- Data Fetching ---
     const fetchBatchData = useCallback(async () => {
@@ -76,6 +78,36 @@ console.log(response);
             fetchBatchData();
         }
     }, [batchId, fetchBatchData]);
+
+
+    const [customer, setCustomer] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // 2. Data Fetching Effect
+    useEffect(() => {
+        if (batchData.farmerId) {
+            fetchCustomerDetails();
+        } else {
+            setError("Customer ID not provided.");
+            setIsLoading(false);
+        }
+    }, [batchData.farmerId]);
+
+    const fetchCustomerDetails = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/${batchData.farmerId}`);
+            setCustomer(res.data.data);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to fetch customer details. Does the ID exist?");
+            setCustomer(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
 
     // --- Form Handlers ---
@@ -332,7 +364,9 @@ console.log(response);
 
             {isEditing ? <EditForm /> : <ViewDetails />}
 
-            {showSaleMemo && <MemoForm batchData={batchData}/>}
+            {showSaleMemo && <SellToBatchMemoForm batchData={batchData} selectedCustomer={customer}/>}
+            {/* {showSalesToBatch &&  />} */}
+            <BatchSalesHistory batchId={batchId}/>
         </div>
     );
 };

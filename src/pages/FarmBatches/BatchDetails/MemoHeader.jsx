@@ -25,7 +25,7 @@ const MemoHeader = ({
 
 
 
-    const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
+  const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
   const initialFormState = {
     name: "",
     address: "",
@@ -36,75 +36,12 @@ const MemoHeader = ({
     status: "active",
   };
 
-    const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState(initialFormState);
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-    useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await axios.get(API_BASE_URL);
-      setCustomers(res.data.data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch customers.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  // --- Supplier Search Logic (Debounced API Call) ---
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      const query = customerSearch.trim();
-
-      // Critical check: if the query is empty, stop and clear results
-      if (!query) {
-        setCustomerResults([]);
-        return;
-      }
-
-      setCustomerLoading(true);
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/search?q=${query}`);
-        setCustomerResults(res.data.data || []);
-      } catch (err) {
-        console.error("Supplier search failed:", err);
-        setCustomerResults([]);
-      } finally {
-        setCustomerLoading(false);
-      }
-    }, 500);
-
-    // This cleanup function runs when the component unmounts OR when 
-    // `supplierSearchQuery` changes, cancelling the previous timer.
-    return () => clearTimeout(delayDebounceFn);
-  }, [customerSearch]);
-
-  const handleSelectCustomer = (customer) => {
-    setSelectedCustomer(customer);
-    setCustomerResults([]);
-  }
-
-  const handleCustomerAdded = (customer) => {
-    setSelectedCustomer(customer);
-    setCustomerSearch(customer.name);
-  }
-
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    // Ensure numerical inputs are parsed correctly
-    const newValue = type === 'number' ? Number(value) : value;
-    setForm({ ...form, [name]: newValue });
-  };
 
   // Modified to close the modal as well
   const resetForm = () => {
@@ -123,8 +60,7 @@ const MemoHeader = ({
       } else {
         await axios.post(API_BASE_URL, form);
       }
-      resetForm(); // Closes modal, resets form, and clears editingId
-      fetchCustomers();
+      resetForm();
     } catch (err) {
       console.error(err);
       // Ensure numerical fields are not empty strings before sending
@@ -140,7 +76,7 @@ const MemoHeader = ({
 
   return (
     <>
-      
+
       {/* Header - Modern Look (same as before) */}
       <div className="bg-blue-600 text-white p-6 flex flex-col md:flex-row items-center justify-between print-header">
         {/* Shop Info */}
@@ -189,39 +125,11 @@ const MemoHeader = ({
         <div className="flex gap-3 items-start">
           {/* Customer Search Field */}
           <div className="flex-1 relative">
-            <input
-              value={selectedCustomer?.name || customerSearch}
-              onChange={(e) => {
-                setCustomerSearch(e.target.value);
-                if (selectedCustomer) setSelectedCustomer(null); // Clear selected customer on new search
-              }}
-              placeholder={t.searchCustomerPlaceholder}
-              className={inputClass}
-            />
-
-            {customerResults.length > 0 && (
-              <ul className="absolute z-40 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {customerResults.map((c) => (
-                  <li
-                    key={c._id}
-                    onClick={() => handleSelectCustomer(c)}
-                    className="p-3 cursor-pointer hover:bg-blue-50 border-b flex justify-between items-center transition-colors"
-                  >
-                    <span className="font-medium text-gray-800">{c.name}</span>
-                    <span className="text-sm text-gray-600">{c.phone}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <p
+            >{selectedCustomer?.name} </p>
           </div>
-
-          {/* Add New Customer Button */}
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="no-print bg-green-500 text-white text-sm px-4 py-2 rounded-lg shadow hover:bg-green-600 transition-colors flex items-center gap-1"
-          >
-            {t.addNewCustomer}
-          </button>
+            <p>previous due</p>
+            <p>total purchase</p>
         </div>
 
         {/* Display selected customer details (read-only for print) */}

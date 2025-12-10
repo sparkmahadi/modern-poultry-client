@@ -1,4 +1,8 @@
-export default function Home() {
+import photo from "../../../public/poultry-image.jpg";
+
+import React from 'react';
+
+const Home = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
 
@@ -9,7 +13,7 @@ export default function Home() {
             Smart <span className="text-green-600">Poultry Farming</span> Management
           </h2>
           <p className="text-lg text-gray-600">
-            Track your flocks, feed, production, and health in one simple dashboard. 
+            Track your flocks, feed, production, and health in one simple dashboard.
             Designed for farmers, hatcheries, and feed mill operators.
           </p>
           <div className="space-x-4">
@@ -22,8 +26,8 @@ export default function Home() {
           </div>
         </div>
         <div className="md:w-1/2 mt-10 md:mt-0 flex justify-center">
-          <img 
-            src="https://illustrations.popsy.co/green/farm.svg" 
+          <img
+            src={photo}
             alt="Poultry dashboard preview"
             className="w-4/5"
           />
@@ -77,8 +81,8 @@ export default function Home() {
       <section id="about" className="px-8 md:px-20 py-16 bg-gray-100">
         <h3 className="text-3xl font-bold text-center mb-6">About PoultryCare</h3>
         <p className="max-w-3xl mx-auto text-center text-gray-600">
-          PoultryCare is a modern farm management platform built on the MERN stack. 
-          It helps poultry farmers, hatcheries, and feed producers run smarter, more 
+          PoultryCare is a modern farm management platform built on the MERN stack.
+          It helps poultry farmers, hatcheries, and feed producers run smarter, more
           profitable operations by providing real-time data and analytics.
         </p>
       </section>
@@ -87,22 +91,22 @@ export default function Home() {
       <section id="contact" className="px-8 md:px-20 py-16">
         <h3 className="text-3xl font-bold text-center mb-6">Contact Us</h3>
         <form className="max-w-xl mx-auto space-y-4">
-          <input 
-            type="text" 
-            placeholder="Your Name" 
+          <input
+            type="text"
+            placeholder="Your Name"
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-400"
           />
-          <input 
-            type="email" 
-            placeholder="Your Email" 
+          <input
+            type="email"
+            placeholder="Your Email"
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-400"
           />
-          <textarea 
-            placeholder="Your Message" 
+          <textarea
+            placeholder="Your Message"
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-400 h-32"
           ></textarea>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 w-full"
           >
             Send Message
@@ -116,4 +120,6 @@ export default function Home() {
       </footer>
     </div>
   );
-}
+};
+
+export default Home;

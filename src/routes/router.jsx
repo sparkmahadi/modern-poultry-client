@@ -27,7 +27,8 @@ import DailyDueSales from '../pages/Sales/DailyDueSales';
 import DueList from '../pages/Purchase/DueLIst/DueLIst';
 import BatchList from '../pages/FarmBatches/BatchList';
 import CreateBatchForm from '../pages/FarmBatches/CreateBatchForm';
-import BatchDetails from '../pages/FarmBatches/BatchDetails';
+import BatchDetails from '../pages/FarmBatches/BatchDetails/BatchDetails';
+import SaleDetails from '../pages/Sales/SaleDetails';
 
 const router = createBrowserRouter([
   {
@@ -49,10 +50,13 @@ const router = createBrowserRouter([
       { path: '/suppliers/:id', element: <SupplierDetails /> },
       { path: "/products/details/:id", element: <ProductDetail /> },
       { path: '/categories/:id', element: <CategoryDetail /> },
+
       { path: '/sales', element: <SalesList /> },
+      { path: '/sales/:saleId', element: <SaleDetails /> },
       { path: '/sales/daily-sales', element: <DailySales /> },
       { path: '/sales/daily-cash-sales', element: <DailyCashSales /> },
       { path: '/sales/daily-due-sales', element: <DailyDueSales /> },
+
       { path: '/sales/create-sale', element: <CreateSell /> },
       { path: '/purchases', element: <PurchaseList /> },
       { path: '/purchases/create', element: <PurchaseForm /> },
