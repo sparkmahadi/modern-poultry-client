@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`; // Adjust as needed
 
-const DueList = () => {
+const PurchaseDueList = () => {
     const [purchases, setPurchases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -276,4 +276,4 @@ const handleSubmitPayment = async () => {
     );
 };
 
-export default DueList;
+export default PurchaseDueList;

@@ -28,7 +28,7 @@ import BatchList from '../pages/FarmBatches/BatchList';
 import CreateBatchForm from '../pages/FarmBatches/CreateBatchForm';
 import BatchDetails from '../pages/FarmBatches/BatchDetails/BatchDetails';
 import SaleDetails from '../pages/Sales/SaleDetails';
-import DueList from '../pages/Purchase/DueList/DueList';
+import PurchaseDueList from '../pages/Purchase/PurchaseDueList/PurchaseDueList';
 
 const router = createBrowserRouter([
   {
@@ -61,7 +61,7 @@ const router = createBrowserRouter([
       { path: '/purchases', element: <PurchaseList /> },
       { path: '/purchases/create', element: <PurchaseForm /> },
       { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
-      { path: '/purchases/due-list', element: <DueList /> },
+      { path: '/purchases/due-list', element: <PurchaseDueList /> },
 
       { path: '/farm-batches', element: <BatchList /> },
       { path: '/farm-batches/:batchId', element: <BatchDetails /> },

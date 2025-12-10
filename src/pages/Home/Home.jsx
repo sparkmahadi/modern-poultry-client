@@ -1,4 +1,4 @@
-import photo from "../../../public/poultry-image.jpg";
+import photo from "../../images/poultry-image.jpg";
 
 import React from 'react';
 
