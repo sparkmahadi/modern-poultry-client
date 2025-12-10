@@ -24,7 +24,7 @@ import CustomerDetails from '../pages/Customers/CustomerDetails';
 import DailySales from '../pages/Sales/DailySales';
 import DailyCashSales from '../pages/Sales/DailyCashSales';
 import DailyDueSales from '../pages/Sales/DailyDueSales';
-import DueList from '../pages/Purchase/DueLIst/DueLIst';
+import DueList from '../pages/Purchase/DueList/DueList';
 import BatchList from '../pages/FarmBatches/BatchList';
 import CreateBatchForm from '../pages/FarmBatches/CreateBatchForm';
 import BatchDetails from '../pages/FarmBatches/BatchDetails/BatchDetails';
