@@ -285,8 +285,9 @@ const PurchaseForm = () => {
           subtotal: p.qty * p.purchase_price,
         })),
       };
-
+      console.log(products);
       console.log('purchasing data', payload);
+      // return;
 
       await axios.post(`${API_BASE_URL}/api/purchases`, payload);
       // resetForm();
@@ -360,8 +361,8 @@ const PurchaseForm = () => {
               <div className="space-y-4 pt-4 border-t">
                 {/* These are controlled by the main input's onChange now, but kept for direct edits */}
                 <p>Supplier: {form.supplier_name}</p>
-                <p>Phone: {form.phone}</p> 
-                <p>Address: {form.address}</p> 
+                <p>Phone: {form.phone}</p>
+                <p>Address: {form.address}</p>
               </div>
               {form.supplierId && (
                 <p className="text-xs text-green-600 mt-2 font-medium">Selected Supplier ID: {form.supplierId}</p>

@@ -1,33 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router'; // Assuming you use React Router
+import { useParams, useNavigate, Link } from 'react-router';
 import axios from 'axios';
-import CustomerBatchList from './CustomerBatchList';
+import { toast } from 'react-toastify';
+// Assuming you have access to icons (e.g., from heroicons)
+// For this example, I'll use simple SVG definitions or unicode icons.
 
-// --- Helper Components for consistency (from CustomerManager) ---
+// --- Constants & Utilities ---
 
-const InputField = ({ label, name, type = "text", value, onChange, placeholder, required = false, className = "" }) => (
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const formatDate = (isoDate) => isoDate ? new Date(isoDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+const formatCurrency = (amount) => `৳${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // Use better locale formatting
+
+// --- Helper Components for consistency ---
+
+const InputField = ({ label, name, type = "text", value, onChange, placeholder, required = false, className = "", min }) => (
     <div className={`flex flex-col ${className}`}>
-        <label className="text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label className="text-sm font-semibold text-gray-700 mb-1">{label}</label>
         <input
             name={name}
             type={type}
             value={value}
             onChange={onChange}
             placeholder={placeholder}
-            className="border border-gray-300 rounded-lg p-3 w-full focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+            className="border border-gray-300 rounded-xl p-3 w-full focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 shadow-sm"
             required={required}
+            min={min}
         />
     </div>
 );
 
 const SelectField = ({ label, name, value, onChange, options, className = "" }) => (
     <div className={`flex flex-col ${className}`}>
-        <label className="text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label className="text-sm font-semibold text-gray-700 mb-1">{label}</label>
         <select
             name={name}
             value={value}
             onChange={onChange}
-            className="border border-gray-300 rounded-lg p-3 w-full bg-white focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+            className="border border-gray-300 rounded-xl p-3 w-full bg-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 shadow-sm"
         >
             {options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -38,7 +48,17 @@ const SelectField = ({ label, name, value, onChange, options, className = "" }) 
     </div>
 );
 
-// --- New: Edit Customer Modal Component (adapted from CustomerManager) ---
+// Improved DetailItem for the main grid
+const DetailItem = ({ label, value, color = 'text-gray-900', raw = false, badge = false }) => (
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</dt>
+        <dd className={`mt-1 text-lg font-bold ${color} capitalize`}>
+            {raw ? value : (badge ? <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">{value}</span> : value)}
+        </dd>
+    </div>
+);
+
+// --- Edit Customer Modal Component (Kept Separate) ---
 
 const EditCustomerModal = ({
     isOpen,
@@ -52,27 +72,27 @@ const EditCustomerModal = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                    <h2 className="text-2xl font-bold text-blue-600 mb-4 flex items-center justify-between">
-                        <span>✏️ Edit Customer Details</span>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition" aria-label="Close modal">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-70 flex justify-center items-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100">
+                <div className="p-8">
+                    <h2 className="text-3xl font-extrabold text-indigo-600 mb-4 flex items-center justify-between">
+                        <span>📝 Edit Customer Details</span>
+                        <button onClick={onClose} className="text-gray-400 hover:text-indigo-600 transition" aria-label="Close modal">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </h2>
-                    <hr className="mb-4" />
+                    <hr className="mb-6 border-indigo-100" />
 
                     {error && (
-                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 text-sm" role="alert">
-                            <p className="font-bold">Error:</p>
+                        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-4 text-sm rounded-lg" role="alert">
+                            <p className="font-bold">Update Error:</p>
                             <p>{error}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         <InputField label="Name" name="name" value={form.name} onChange={handleChange} required />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <InputField label="Phone" name="phone" value={form.phone} onChange={handleChange} />
                             <SelectField
                                 label="Customer Type"
@@ -84,7 +104,7 @@ const EditCustomerModal = ({
                         </div>
                         <InputField label="Address" name="address" value={form.address} onChange={handleChange} />
                         
-                        <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                        <div className="grid grid-cols-2 gap-5 border-t pt-5">
                             <InputField label="Current Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} min="0" />
                             <InputField label="Current Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} min="0" />
                         </div>
@@ -97,18 +117,18 @@ const EditCustomerModal = ({
                             options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]}
                         />
                         
-                        <div className="flex gap-3 pt-4">
+                        <div className="flex gap-4 pt-5">
                             <button
                                 type="submit"
-                                className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-blue-700 transition duration-150 disabled:opacity-50"
+                                className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition duration-200 shadow-md disabled:opacity-50"
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Saving...' : "Update Customer"}
+                                {isLoading ? 'Saving Changes...' : "Save & Update Customer"}
                             </button>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-300 transition duration-150"
+                                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition duration-200"
                                 disabled={isLoading}
                             >
                                 Cancel
@@ -121,13 +141,225 @@ const EditCustomerModal = ({
     );
 };
 
-// --- Main Component ---
+
+// --- CustomerBatchList Component (Merged & Improved UI) ---
+
+const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
+    const [loadingDelete, setLoadingDelete] = useState(false);
+    
+    const handleEndBatch = (batchId) => {
+        alert(`Starting End Batch Flow for Batch ID: ${batchId}`);
+    };
+
+    const statusColors = {
+        'Active': 'bg-blue-100 text-blue-800',
+        'Completed': 'bg-green-100 text-green-800',
+        'High Mortality': 'bg-red-100 text-red-800',
+    };
+
+    const deleteBatch = async (batchId) => {
+        setLoadingDelete(true);
+        try {
+            await axios.delete(`${API_BASE_URL}/api/batches/${batchId}`);
+            toast.success('Batch deleted successfully!');
+            fetchBatchesByCustomerId(); 
+        } catch (error) {
+            console.error('Failed to delete batch:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete batch. Please try again.');
+        } finally {
+            setLoadingDelete(false);
+        }
+    };
+
+    const handleDeleteBatch = async (batchId) => {
+        if (window.confirm("Are you sure you want to permanently delete this batch?")) {
+            await deleteBatch(batchId);
+        }
+    };
+    
+    if (!batches || batches.length === 0) {
+        return (
+            <div className="bg-white p-6 rounded-xl shadow-lg mb-8 text-center border-2 border-dashed border-gray-200">
+                <p className="text-gray-500 italic">No active or historical farming batches associated with this customer.</p>
+                <Link to='/create-batch' 
+                    className="mt-4 inline-flex items-center bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition duration-150 text-sm"
+                >
+                    <span className="mr-2">🌱</span> Start New Batch
+                </Link>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white shadow-xl rounded-xl p-6 mb-8">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-extrabold text-gray-800 flex items-center">
+                    <span className="mr-3 text-indigo-500">🐔</span> Farming Batches
+                </h2>
+                <Link to='/create-batch' 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 text-sm"
+                >
+                    ➕ Add New Batch
+                </Link>
+            </div>
+
+            {loadingDelete && <p className="text-yellow-600 mb-4 font-medium">Processing deletion...</p>}
+            
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            {['Batch ID', 'Start Date', 'Feed Used (kg)', 'Mortality (%)', 'Expected End Date', 'Status', 'Actions'].map((header) => (
+                                <th key={header} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    {header}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                        {batches.map((batch) => (
+                            <tr key={batch._id} className="hover:bg-indigo-50/20 transition duration-150">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-700">{batch._id.substring(0, 8)}...</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(batch.startDate)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">{batch.feedAssigned}</td>
+                                <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${batch.mortality > 10 ? 'text-red-600' : batch.mortality > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                    {batch.mortality}%
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(batch.expectedEndDate)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[batch.status]}`}>
+                                        {batch.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                    <Link to={`/farm-batches/${batch._id}`} className="text-indigo-600 hover:text-indigo-900 font-medium">Details</Link>
+                                    {batch.status !== 'Completed' && (
+                                        <button onClick={() => handleEndBatch(batch._id)} className="text-red-600 hover:text-red-900 font-medium">End</button>
+                                    )}
+                                    <button onClick={() => handleDeleteBatch(batch._id)} disabled={loadingDelete} className="text-yellow-600 hover:text-yellow-900 disabled:opacity-50 font-medium">Delete</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+
+// --- CustomerSales Component (Merged & Improved UI) ---
+
+const CustomerSales = ({ customerId }) => {
+    const navigate = useNavigate();
+    const [memos, setMemos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [expandedMemoId, setExpandedMemoId] = useState(null);
+
+    const fetchSalesByCustomerId = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/sales/customer-sales/${customerId}`);
+            const data = res.data.data || [];
+            setMemos(data);
+        } catch (err) {
+            console.error(err);
+            setError(`Failed to load sales: ${err.response?.data?.message || err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (customerId) {
+            fetchSalesByCustomerId();
+        }
+    }, [customerId]);
+
+    const toggleExpand = (id) => setExpandedMemoId(expandedMemoId === id ? null : id);
+
+    if (loading) return <p className="p-4 text-center text-indigo-600 font-semibold">Loading Sales Memos...</p>;
+    if (error) return <div className="p-4 bg-red-100 text-red-700 rounded-xl mx-auto max-w-6xl shadow-md">{error}</div>;
+    if (memos.length === 0) return <div className="p-4 text-center text-gray-500 bg-white rounded-xl shadow-md">No sales memos found.</div>;
+
+    return (
+        <div className="p-0">
+            <h2 className="text-2xl font-extrabold mb-6 border-b pb-2 text-gray-800 flex items-center">
+                <span className="mr-3 text-green-500">💰</span> Sales History
+            </h2>
+
+            <div className="overflow-x-auto bg-white rounded-xl shadow-xl">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-indigo-600 text-white">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-xl">Memo No</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Total</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Paid</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Due/Credit</th>
+                            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-xl">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                        {memos.map((memo) => (
+                            <React.Fragment key={memo._id}>
+                                <tr
+                                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                    onClick={() => toggleExpand(memo._id)}
+                                >
+                                    <td className="px-6 py-4 text-sm font-semibold text-indigo-700">{memo.memoNo}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(memo.date)}</td>
+                                    <td className="px-6 py-4 text-sm text-right font-bold text-gray-800">{formatCurrency(memo.total)}</td>
+                                    <td className="px-6 py-4 text-sm text-right text-gray-600">{formatCurrency(memo.paidAmount)}</td>
+                                    <td className={`px-6 py-4 text-sm text-right font-extrabold ${memo.due > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                        {formatCurrency(Math.abs(memo.due))}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/sales/${memo._id}`); }}
+                                            className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-indigo-600 transition"
+                                        >
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                {expandedMemoId === memo._id && (
+                                    <tr className="bg-gray-50">
+                                        <td colSpan="7" className="p-4 border-t border-indigo-200/50">
+                                            <h4 className="text-xs font-bold uppercase mb-2 text-indigo-600">Products Sold:</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                                                {memo.products.map((product, idx) => (
+                                                    <div key={idx} className="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                                                        <span className="font-medium text-gray-800 truncate">{product.item_name}</span>
+                                                        <span className="text-gray-600 text-right ml-4">
+                                                            **{product.qty}** x {formatCurrency(product.price)} = <span className="font-bold">{formatCurrency(product.subtotal)}</span>
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Additional memo details like discount, VAT, etc. could go here */}
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main CustomerDetails Component ---
 
 const CustomerDetails = () => {
-    // 1. Setup Hooks and Constants
     const { id } = useParams();
-    const navigate = useNavigate(); // For redirecting after delete
-    const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
+    const navigate = useNavigate(); 
+    const CUSTOMER_API_URL = `${API_BASE_URL}/api/customers`;
 
     const [customer, setCustomer] = useState(null);
     const [customerBatches, setCustomerBatches] = useState(null);
@@ -136,54 +368,53 @@ const CustomerDetails = () => {
     const [error, setError] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // 2. Data Fetching Effect
+    // 2. Data Fetching Functions
+    const fetchCustomerDetails = async () => {
+        setError(null);
+        try {
+            const res = await axios.get(`${CUSTOMER_API_URL}/${id}`);
+            const customerData = res.data.data;
+            setCustomer(customerData);
+            setForm(customerData); 
+        } catch (err) {
+            console.error("Fetch Customer Details Error:", err);
+            setError("Failed to fetch customer details. Does the ID exist?");
+            setCustomer(null);
+        } 
+    };
+
+    const fetchBatchesByCustomerId = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/batches/customer-farming-batches/${id}`);
+            setCustomerBatches(res.data.batches);
+        } catch (err) {
+            console.error("Fetch Batches Error:", err);
+            setCustomerBatches([]);
+        } 
+    };
+    
+    // Combined Fetch Effect
     useEffect(() => {
         if (id) {
-            fetchCustomerDetails();
-            fetchBatchesByCustomerId();
+            const fetchData = async () => {
+                setIsLoading(true);
+                await Promise.all([
+                    fetchCustomerDetails(), 
+                    fetchBatchesByCustomerId()
+                ]);
+                setIsLoading(false);
+            };
+            fetchData();
         } else {
             setError("Customer ID not provided.");
             setIsLoading(false);
         }
     }, [id]);
 
-    const fetchCustomerDetails = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const res = await axios.get(`${API_BASE_URL}/${id}`);
-            setCustomer(res.data.data);
-            setForm(res.data.data); // Initialize form for editing
-        } catch (err) {
-            console.error(err);
-            setError("Failed to fetch customer details. Does the ID exist?");
-            setCustomer(null);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchBatchesByCustomerId = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/batches/customer-farming-batches/${id}`);
-            console.log(res);
-            setCustomerBatches(res.data.batches);
-            // setForm(res.data.data); // Initialize form for editing
-        } catch (err) {
-            console.error(err);
-            setError("Failed to fetch customer details. Does the ID exist?");
-            setCustomerBatches(null);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     // 3. Edit Form Handlers
     const handleChange = (e) => {
         const { name, value, type } = e.target;
-        const newValue = type === 'number' ? Number(value) : value;
+        const newValue = (type === 'number' && value !== '') ? Number(value) : value;
         setForm({ ...form, [name]: newValue });
     };
 
@@ -192,16 +423,17 @@ const CustomerDetails = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await axios.put(`${API_BASE_URL}/${id}`, form);
-            setCustomer(res.data.data); // Update main customer data
-            setIsModalOpen(false); // Close modal on success
+            const res = await axios.put(`${CUSTOMER_API_URL}/${id}`, form);
+            setCustomer(res.data.data);
+            setIsModalOpen(false);
+            toast.success("Customer details updated successfully!");
         } catch (err) {
             console.error(err);
              if (err.response && err.response.data && err.response.data.message) {
-                setError(err.response.data.message);
-            } else {
-                setError('Failed to update customer.');
-            }
+                 setError(err.response.data.message);
+             } else {
+                 setError('Failed to update customer.');
+             }
         } finally {
             setIsLoading(false);
         }
@@ -209,25 +441,32 @@ const CustomerDetails = () => {
     
     // Function to open the modal and reset local error
     const openEditModal = () => {
-        // Reset form state to current customer data just in case
-        setForm(customer); 
+        if(customer) {
+            setForm({
+                ...customer,
+                due: String(customer.due || 0),
+                advance: String(customer.advance || 0),
+            });
+        }
         setError(null);
         setIsModalOpen(true);
     };
 
     // 4. Delete Handler
     const handleDelete = async () => {
-        if (!window.confirm(`Are you sure you want to permanently delete customer: ${customer.name}?`)) return;
+        if (!customer) return;
+        if (!window.confirm(`Are you sure you want to permanently delete customer: ${customer.name}? This action cannot be undone.`)) return;
         
         setIsLoading(true);
         try {
-            await axios.delete(`${API_BASE_URL}/${id}`);
-            alert(`Customer "${customer.name}" deleted successfully.`);
-            navigate('/customers'); // Redirect to the customer list page
+            await axios.delete(`${CUSTOMER_API_URL}/${id}`);
+            toast.success(`Customer "${customer.name}" deleted successfully.`);
+            navigate('/customers'); 
         } catch (err) {
             console.error(err);
             setError("Failed to delete customer.");
             setIsLoading(false);
+            toast.error("Failed to delete customer.");
         }
     };
 
@@ -237,16 +476,14 @@ const CustomerDetails = () => {
         return <span className={`px-3 py-1 text-sm font-semibold rounded-full ${color} capitalize`}>{status}</span>;
     };
 
-    const formatCurrency = (amount) => `৳${Number(amount).toFixed(2)}`;
-    const formatDate = (isoDate) => isoDate ? new Date(isoDate).toLocaleDateString() : 'N/A';
 
     // 6. Conditional Rendering
     if (isLoading && !customer) {
-        return <div className="p-8 text-center text-xl text-gray-500">Loading customer details...</div>;
+        return <div className="p-8 text-center text-xl text-indigo-500 font-semibold">Loading customer details...</div>;
     }
 
     if (error && !customer) {
-        return <div className="p-8 text-center text-xl text-red-600">Error: {error}</div>;
+        return <div className="p-8 text-center text-xl text-red-600 bg-red-50 rounded-xl border border-red-300 mx-auto max-w-6xl">Error: {error}</div>;
     }
 
     if (!customer) {
@@ -255,86 +492,105 @@ const CustomerDetails = () => {
     
     // 7. Render JSX
     return (
-        <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-            <div className=" mx-auto">
-                <h1 className="text-4xl font-extrabold text-gray-800 mb-6 flex items-center gap-3">
-                    <span className="text-blue-600">👤</span>
-                    {customer.name}
-                </h1>
-                <p className="text-lg text-gray-500 mb-8 border-b pb-4">Details for Customer ID: **{customer._id}**</p>
-
-                {/* Action Buttons */}
-                <div className="flex space-x-4 mb-8">
-                    <button
-                        onClick={openEditModal}
-                        className="bg-yellow-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2"
-                        disabled={isLoading}
-                    >
-                        ✏️ Edit Customer
-                    </button>
-                    <button
-                        onClick={handleDelete}
-                        className="bg-red-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-600 transition disabled:opacity-50 flex items-center gap-2"
-                        disabled={isLoading}
-                    >
-                        🗑️ Delete Customer
-                    </button>
+        <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
+            <div className="mx-auto max-w-6xl">
+                
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                    <h1 className="text-4xl font-extrabold text-gray-900 flex items-center gap-3">
+                        <span className="text-indigo-600">👤</span>
+                        {customer.name}
+                    </h1>
+                    {/* Action Buttons */}
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={openEditModal}
+                            className="bg-yellow-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
+                            disabled={isLoading}
+                        >
+                            ✏️ Edit
+                        </button>
+                        <button
+                            onClick={handleDelete}
+                            className="bg-red-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-red-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
+                            disabled={isLoading}
+                        >
+                            🗑️ Delete
+                        </button>
+                    </div>
                 </div>
 
-                {/* Details Grid */}
-                <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl space-y-6">
-                    <h2 className="text-2xl font-bold text-gray-700 border-b pb-3">General Information</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <DetailItem label="Phone" value={customer.phone || 'N/A'} />
-                        <DetailItem label="Address" value={customer.address || 'N/A'} />
-                        <DetailItem label="Type" value={customer.type} badge={true} />
-                        <DetailItem label="Status" value={getStatusBadge(customer.status)} raw={true} />
+                {/* Financial/Status Overview Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p className="text-sm font-medium text-gray-500">Current Due</p>
+                        <p className="text-2xl font-extrabold text-red-600 mt-1">{formatCurrency(customer.due)}</p>
                     </div>
-
-                    <h2 className="text-2xl font-bold text-gray-700 border-b pt-4 pb-3">Financial Overview</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <DetailItem label="Current Due" value={formatCurrency(customer.due)} color="text-red-600" />
-                        <DetailItem label="Current Advance" value={formatCurrency(customer.advance)} color="text-green-600" />
-                        <DetailItem label="Total Sales" value={formatCurrency(customer.total_sales || 0)} />
-                        <DetailItem label="Total Due (Lifetime)" value={formatCurrency(customer.total_due || 0)} />
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p className="text-sm font-medium text-gray-500">Current Advance</p>
+                        <p className="text-2xl font-extrabold text-green-600 mt-1">{formatCurrency(customer.advance)}</p>
                     </div>
-                    
-                    <h2 className="text-2xl font-bold text-gray-700 border-b pt-4 pb-3">History</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} />
-                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} />
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-indigo-500">
+                        <p className="text-sm font-medium text-gray-500">Total Lifetime Sales</p>
+                        <p className="text-2xl font-extrabold text-indigo-600 mt-1">{formatCurrency(customer.total_sales || 0)}</p>
                     </div>
-                    
-                    <h2 className="text-2xl font-bold text-gray-700 border-b pt-4 pb-3">Purchased Products</h2>
-                    <div className="text-gray-700">
-                        {customer.purchased_products && customer.purchased_products.length > 0 ? (
-                            <ul className="list-disc list-inside space-y-1">
-                                {customer.purchased_products.map((p, index) => <li key={index} className="text-sm">{p}</li>)}
-                            </ul>
-                        ) : (
-                            <p className="text-gray-500 text-sm italic">No product history available.</p>
-                        )}
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-gray-500">
+                        <p className="text-sm font-medium text-gray-500">Customer Status</p>
+                        <div className="mt-2">{getStatusBadge(customer.status)}</div>
                     </div>
-
                 </div>
-            {/* Batches of this customer */}
-            <h3>Farming Batches of Mr. {customer.name}</h3>
-            {
-                customerBatches?.length > 0 &&
-                <CustomerBatchList batches={customerBatches}/>
-            }
 
+                {/* General Information & History Grid */}
+                <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl space-y-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-700 border-b pb-3 flex items-center"><span className="mr-2 text-indigo-500">ℹ️</span> Customer Information</h2>
+                    
+                    {/* General Details Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <DetailItem label="Phone" value={customer.phone || 'N/A'} color="text-gray-700"/>
+                        <DetailItem label="Type" value={customer.type} badge={true}/>
+                        <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} color="text-gray-700"/>
+                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} color="text-gray-700"/>
+                        <DetailItem label="ID" value={customer._id} color="text-gray-700"/>
+                    </div>
+                    
+                    {/* Address Detail - Spanning full width */}
+                    <div className="pt-4 border-t">
+                        <h3 className="text-sm font-bold text-gray-700 mb-1">Address</h3>
+                        <p className="text-md text-gray-600 p-3 bg-gray-50 rounded-lg border">{customer.address || 'N/A'}</p>
+                    </div>
 
-            {/* sales history of this customer */}
-            <h3>Sales History</h3>
+                    <div className="pt-4 border-t">
+                        <h3 className="text-sm font-bold text-gray-700 mb-2">Purchased Products Summary</h3>
+                        <div className="text-gray-700 p-3 bg-gray-50 rounded-lg border">
+                            {customer.purchased_products && customer.purchased_products.length > 0 ? (
+                                <ul className="list-disc list-inside space-y-1 text-sm grid sm:grid-cols-2">
+                                    {customer.purchased_products.map((p, index) => <li key={index} className="text-gray-600">{p}</li>)}
+                                </ul>
+                            ) : (
+                                <p className="text-gray-500 text-sm italic">No product history available.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Batches and Sales Sections */}
+                <div className="space-y-8">
+                    {/* Batches of this customer (using merged component) */}
+                    <CustomerBatchList 
+                        batches={customerBatches}
+                        fetchBatchesByCustomerId={fetchBatchesByCustomerId}
+                    />
+
+                    {/* sales history of this customer (using merged component) */}
+                    <CustomerSales customerId={customer._id}/>
+                </div>
             </div>
-
 
 
             {/* Edit Modal */}
             <EditCustomerModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {setIsModalOpen(false); setError(null);}} 
                 form={form}
                 isLoading={isLoading}
                 error={error}
@@ -344,15 +600,5 @@ const CustomerDetails = () => {
         </div>
     );
 };
-
-// --- Local Helper for Displaying Details ---
-const DetailItem = ({ label, value, color = 'text-gray-900', raw = false, badge = false }) => (
-    <div>
-        <dt className="text-sm font-medium text-gray-500">{label}</dt>
-        <dd className={`mt-1 text-lg ${color} capitalize`}>
-            {raw ? value : (badge ? <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">{value}</span> : value)}
-        </dd>
-    </div>
-);
 
 export default CustomerDetails;
