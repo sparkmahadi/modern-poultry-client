@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router'; // Assuming you use React Router
 import axios from 'axios';
+import CustomerBatchList from './CustomerBatchList';
 
 // --- Helper Components for consistency (from CustomerManager) ---
 
@@ -129,6 +130,7 @@ const CustomerDetails = () => {
     const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
 
     const [customer, setCustomer] = useState(null);
+    const [customerBatches, setCustomerBatches] = useState(null);
     const [form, setForm] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -138,6 +140,7 @@ const CustomerDetails = () => {
     useEffect(() => {
         if (id) {
             fetchCustomerDetails();
+            fetchBatchesByCustomerId();
         } else {
             setError("Customer ID not provided.");
             setIsLoading(false);
@@ -155,6 +158,23 @@ const CustomerDetails = () => {
             console.error(err);
             setError("Failed to fetch customer details. Does the ID exist?");
             setCustomer(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchBatchesByCustomerId = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/batches/customer-farming-batches/${id}`);
+            console.log(res);
+            setCustomerBatches(res.data.batches);
+            // setForm(res.data.data); // Initialize form for editing
+        } catch (err) {
+            console.error(err);
+            setError("Failed to fetch customer details. Does the ID exist?");
+            setCustomerBatches(null);
         } finally {
             setIsLoading(false);
         }
@@ -236,7 +256,7 @@ const CustomerDetails = () => {
     // 7. Render JSX
     return (
         <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-            <div className="max-w-4xl mx-auto">
+            <div className=" mx-auto">
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-6 flex items-center gap-3">
                     <span className="text-blue-600">👤</span>
                     {customer.name}
@@ -264,7 +284,7 @@ const CustomerDetails = () => {
                 {/* Details Grid */}
                 <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl space-y-6">
                     <h2 className="text-2xl font-bold text-gray-700 border-b pb-3">General Information</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <DetailItem label="Phone" value={customer.phone || 'N/A'} />
                         <DetailItem label="Address" value={customer.address || 'N/A'} />
                         <DetailItem label="Type" value={customer.type} badge={true} />
@@ -272,7 +292,7 @@ const CustomerDetails = () => {
                     </div>
 
                     <h2 className="text-2xl font-bold text-gray-700 border-b pt-4 pb-3">Financial Overview</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <DetailItem label="Current Due" value={formatCurrency(customer.due)} color="text-red-600" />
                         <DetailItem label="Current Advance" value={formatCurrency(customer.advance)} color="text-green-600" />
                         <DetailItem label="Total Sales" value={formatCurrency(customer.total_sales || 0)} />
@@ -280,7 +300,7 @@ const CustomerDetails = () => {
                     </div>
                     
                     <h2 className="text-2xl font-bold text-gray-700 border-b pt-4 pb-3">History</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} />
                         <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} />
                     </div>
@@ -297,7 +317,19 @@ const CustomerDetails = () => {
                     </div>
 
                 </div>
+            {/* Batches of this customer */}
+            <h3>Farming Batches of Mr. {customer.name}</h3>
+            {
+                customerBatches?.length > 0 &&
+                <CustomerBatchList batches={customerBatches}/>
+            }
+
+
+            {/* sales history of this customer */}
+            <h3>Sales History</h3>
             </div>
+
+
 
             {/* Edit Modal */}
             <EditCustomerModal
