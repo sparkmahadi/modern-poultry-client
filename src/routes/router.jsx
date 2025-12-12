@@ -29,6 +29,7 @@ import CreateBatchForm from '../pages/FarmBatches/CreateBatchForm';
 import BatchDetails from '../pages/FarmBatches/BatchDetails/BatchDetails';
 import SaleDetails from '../pages/Sales/SaleDetails';
 import PurchaseDueList from '../pages/Purchase/PurchaseDueList/PurchaseDueList';
+import PaymentAccounts from '../pages/PaymentAccounts/PaymentAccounts';
 
 const router = createBrowserRouter([
   {
@@ -44,7 +45,7 @@ const router = createBrowserRouter([
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
       { path: '/customers/:id', element: <CustomerDetails /> },
-      { path: '/cash', element: <CashData /> },
+      { path: '/cash', element: <PaymentAccounts /> },
       { path: '/transactions', element: <TransactionsList /> },
       { path: '/suppliers', element: <SupplierManager /> },
       { path: '/suppliers/:id', element: <SupplierDetails /> },

@@ -93,6 +93,7 @@ const PurchaseForm = () => {
     const { name, value, type } = e.target;
     const newValue = type === 'number' ? Number(value) : value;
 
+
     if (['supplier_name', 'address', 'phone'].includes(name)) {
       // Update the form state for display in input fields
       setForm({ ...form, [name]: newValue, supplierId: null });
@@ -103,6 +104,11 @@ const PurchaseForm = () => {
       }
     } else {
       setForm({ ...form, [name]: newValue });
+    }
+
+    if (["paid_amount", "payment_method", "account_id"].includes(name)) {
+      setForm({ ...form, [name]: newValue });
+      return;
     }
   };
 
@@ -261,40 +267,58 @@ const PurchaseForm = () => {
     setProducts(newProducts);
   };
 
+  const [accountList, setAccountList] = useState([]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/accounts`);
+      setAccountList(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch accounts", err);
+    }
+  };
+
+
 
   // --- Form Submission (Unchanged) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.supplier_name.trim()) return alert("Please specify the Supplier Name.");
-    if (products.length === 0) return alert("Please add at least one product to the purchase list.");
-    if (!form.supplierId) {
-      return alert("Supplier not selected. Please select an existing supplier or use the button to create a new one.");
-    }
+
+    if (!form.supplierId) return alert("Please select or create a supplier.");
+    if (!form.payment_method) return alert("Select payment method.");
+    if (!form.account_id) return alert("Select payment account.");
+    if (products.length === 0) return alert("Add at least one product.");
 
     setIsSubmitting(true);
     try {
       const payload = {
-        ...form,
-        total_amount: totalPurchase,
         supplier_id: form.supplierId,
+        payment_method: form.payment_method,
+        account_id: form.account_id,
+        paid_amount: Number(form.paid_amount),
+
+        total_amount: totalPurchase,
+
         products: products.map(p => ({
           product_id: p._id,
           name: p.item_name,
-          qty: p.qty,
-          purchase_price: p.purchase_price,
-          subtotal: p.qty * p.purchase_price,
+          qty: Number(p.qty),
+          purchase_price: Number(p.purchase_price),
+          subtotal: Number(p.qty * p.purchase_price),
         })),
       };
-      console.log(products);
-      console.log('purchasing data', payload);
-      // return;
 
       await axios.post(`${API_BASE_URL}/api/purchases`, payload);
-      // resetForm();
+
       toast.success("Purchase created successfully!");
+      resetForm();
     } catch (err) {
-      console.error("Purchase submission failed:", err);
-      toast.error("Failed to create purchase. Please try again.");
+      console.error("Purchase failed:", err);
+      toast.error(err.response?.data?.message || "Failed to create purchase.");
     } finally {
       setIsSubmitting(false);
     }
@@ -481,6 +505,84 @@ const PurchaseForm = () => {
                   {netBalance >= 0 ? `Due: ৳${netBalance.toFixed(2)}` : `Credit: ৳${Math.abs(netBalance).toFixed(2)}`}
                 </span>
               </div>
+
+
+              {/* ========== PAYMENT INFORMATION ========== */}
+              <div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-1 space-y-4">
+                <h2 className="text-xl font-bold text-blue-600 mb-4 border-b pb-2">
+                  Payment Info
+                </h2>
+
+                {/* Payment Method */}
+                <label className="text-sm font-medium text-gray-700">Payment Method</label>
+                <select
+                  value={form.payment_method || ""}
+                  onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+                  className="w-full p-2 border rounded-lg"
+                  required
+                >
+                  <option value="">Select Method</option>
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank</option>
+                  <option value="mobile">Mobile Wallet</option>
+                </select>
+
+                {/* Account Selection (depends on method) */}
+                {form.payment_method && (
+                  <>
+                    <label className="text-sm font-medium text-gray-700">Select Account</label>
+                    <select
+                      value={form.account_id || ""}
+                      onChange={(e) => setForm({ ...form, account_id: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                      required
+                    >
+                      <option value="">Choose Account</option>
+
+                      {/* CASH ACCOUNTS */}
+                      {form.payment_method === "cash" &&
+                        accountList
+                          .filter((a) => a.type === "cash")
+                          .map((a) => (
+                            <option value={a._id} key={a._id}>
+                              {a.name} (Balance: {a.balance})
+                            </option>
+                          ))}
+
+                      {/* BANK ACCOUNTS */}
+                      {form.payment_method === "bank" &&
+                        accountList
+                          .filter((a) => a.type === "bank")
+                          .map((a) => (
+                            <option value={a._id} key={a._id}>
+                              {a.bank_name} - {a.account_number} (Balance: {a.balance})
+                            </option>
+                          ))}
+
+                      {/* MOBILE ACCOUNTS */}
+                      {form.payment_method === "mobile" &&
+                        accountList
+                          .filter((a) => a.type === "mobile")
+                          .map((a) => (
+                            <option value={a._id} key={a._id}>
+                              {a.method?.toUpperCase()} - {a.number} (Balance: {a.balance})
+                            </option>
+                          ))}
+                    </select>
+                  </>
+                )}
+
+                {/* Paid Amount */}
+                <InputField
+                  label="Paid Amount (৳)"
+                  name="paid_amount"
+                  type="number"
+                  value={form.paid_amount || ""}
+                  onChange={handleChange}
+                />
+              </div>
+
+
 
               <button
                 type="submit"
