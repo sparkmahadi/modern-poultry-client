@@ -58,7 +58,7 @@ const Navbar = () => {
     { name: t.sales, icon: List, href: '/sales' },
     { name: t.purchases, icon: List, href: '/purchases' },
     { name: "Trans", icon: List, href: '/transactions' },
-    { name: "Cash", icon: List, href: '/cash' },
+    { name: "payment_accounts", icon: List, href: '/payment_accounts' },
   ];
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);

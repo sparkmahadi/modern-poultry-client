@@ -275,7 +275,8 @@ const PurchaseForm = () => {
 
   const fetchAccounts = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/accounts`);
+      const res = await axios.get(`${API_BASE_URL}/api/payment_accounts`);
+      console.log(res, "accounts");
       setAccountList(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch accounts", err);
@@ -312,10 +313,12 @@ const PurchaseForm = () => {
         })),
       };
 
+      console.log('payload', payload);
+
       await axios.post(`${API_BASE_URL}/api/purchases`, payload);
 
       toast.success("Purchase created successfully!");
-      resetForm();
+      // resetForm();
     } catch (err) {
       console.error("Purchase failed:", err);
       toast.error(err.response?.data?.message || "Failed to create purchase.");
