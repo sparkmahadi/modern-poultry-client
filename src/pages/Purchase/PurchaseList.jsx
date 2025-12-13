@@ -61,11 +61,11 @@ const PurchaseList = () => {
 
 
     // Calculate totals
-    const totalPurchased = purchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    const totalPurchased = purchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
 
-    const totalPaid = purchases.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    const totalPaid = purchases.reduce((sum, p) => sum + (p.paid_amount || 0), 0);
 
-    const totalDue = purchases.reduce((sum, p) => sum + ((p.totalAmount || 0) - (p.paidAmount || 0)), 0);
+    const totalDue = purchases.reduce((sum, p) => sum + ((p.total_amount || 0) - (p.paid_amount || 0)), 0);
 
 
     return (
@@ -128,20 +128,20 @@ const PurchaseList = () => {
                                         {new Date(purchase.date).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {purchase.supplierId || 'N/A'}
+                                        {purchase.supplier_id || 'N/A'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">
-                                        ৳{Number(purchase.totalAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.total_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
-                                        ৳{Number(purchase.paidAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.paid_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
-                                        ৳{Number(purchase.totalAmount - purchase.paidAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.total_amount - purchase.paid_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                         {
-                                            Number(purchase.totalAmount - purchase.paidAmount || 0).toFixed(2) > 0 &&
+                                            Number(purchase.total_amount - purchase.paid_amount || 0).toFixed(2) > 0 &&
                                             <button
                                                 onClick={() => handlePaySupplierDue(purchase._id)}
                                                 className="text-red-600 hover:text-red-900 transition ml-4"

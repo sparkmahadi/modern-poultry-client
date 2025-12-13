@@ -58,47 +58,47 @@ const PurchaseDueList = () => {
         setShowPaymentModal(true);
     };
 
-const handleSubmitPayment = async () => {
-    const pay = Number(paymentAmount);
-    const paymentMethod = "cash";
-    const due = remainingDue;
+    const handleSubmitPayment = async () => {
+        const pay = Number(paymentAmount);
+        const payment_method = "cash";
+        const due = remainingDue;
 
-    if (!pay || pay <= 0) {
-        return toast.error("Enter a valid payment amount.");
-    }
+        if (!pay || pay <= 0) {
+            return toast.error("Enter a valid payment amount.");
+        }
 
-    if (pay > due) {
-        return toast.error("Payment cannot exceed remaining due!");
-    }
+        if (pay > due) {
+            return toast.error("Payment cannot exceed remaining due!");
+        }
 
-    try {
-        const response = await axios.patch(
-            `${API_BASE_URL}/pay/${selectedPurchase._id}`,
-            {
-                payAmount: pay,
-                paymentMethod: paymentMethod || "cash"  // optional dropdown later
-            }
-        );
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/pay/${selectedPurchase._id}`,
+                {
+                    payAmount: pay,
+                    payment_method: payment_method || "cash"  // optional dropdown later
+                }
+            );
 
-        const updated = response.data.data;
+            const updated = response.data.data;
 
-        // Update UI instantly
-        setPurchases(prev =>
-            prev.map(p =>
-                p._id === selectedPurchase._id
-                    ? { ...p, paidAmount: updated.paidAmount }
-                    : p
-            )
-        );
+            // Update UI instantly
+            setPurchases(prev =>
+                prev.map(p =>
+                    p._id === selectedPurchase._id
+                        ? { ...p, paid_amount: updated.paid_amount }
+                        : p
+                )
+            );
 
-        toast.success("Payment recorded successfully!");
-        setShowPaymentModal(false);
+            toast.success("Payment recorded successfully!");
+            setShowPaymentModal(false);
 
-    } catch (err) {
-        console.error("Payment update failed:", err);
-        toast.error(err.response?.data?.message || "Failed to update payment.");
-    }
-};
+        } catch (err) {
+            console.error("Payment update failed:", err);
+            toast.error(err.response?.data?.message || "Failed to update payment.");
+        }
+    };
 
 
 
@@ -116,7 +116,7 @@ const handleSubmitPayment = async () => {
 
     const totalDue = purchases.reduce((sum, item) => sum + item.payment_due, 0);
     const remainingDue = selectedPurchase
-        ? Number(selectedPurchase.totalAmount) - Number(selectedPurchase.paidAmount)
+        ? Number(selectedPurchase.total_amount) - Number(selectedPurchase.paid_amount)
         : 0;
 
     const updatedRemainingDue = selectedPurchase
@@ -165,20 +165,20 @@ const handleSubmitPayment = async () => {
                                         {new Date(purchase.date).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {purchase.supplierId || 'N/A'}
+                                        {purchase.supplier_id || 'N/A'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">
-                                        ৳{Number(purchase.totalAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.total_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
-                                        ৳{Number(purchase.paidAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.paid_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
-                                        ৳{Number(purchase.totalAmount - purchase.paidAmount || 0).toFixed(2)}
+                                        ৳{Number(purchase.total_amount - purchase.paid_amount || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                         {
-                                            Number(purchase.totalAmount - purchase.paidAmount || 0).toFixed(2) > 0 &&
+                                            Number(purchase.total_amount - purchase.paid_amount || 0).toFixed(2) > 0 &&
                                             <button
                                                 onClick={() => handlePaySupplierDue(purchase)}
                                                 className="text-red-600 hover:text-red-900 transition ml-4"
@@ -212,65 +212,63 @@ const handleSubmitPayment = async () => {
 
             {/* modal */}
             {showPaymentModal && selectedPurchase && (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Pay Supplier Due</h2>
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h2 className="text-xl font-bold mb-4">Pay Supplier Due</h2>
 
-            <div className="space-y-2 mb-4">
-                <p><strong>Total Amount:</strong> ৳{selectedPurchase.totalAmount}</p>
-                <p><strong>Paid Already:</strong> ৳{selectedPurchase.paidAmount}</p>
-                <p><strong>Current Due:</strong> ৳{remainingDue}</p>
+                        <div className="space-y-2 mb-4">
+                            <p><strong>Total Amount:</strong> ৳{selectedPurchase.total_amount}</p>
+                            <p><strong>Paid Already:</strong> ৳{selectedPurchase.paid_amount}</p>
+                            <p><strong>Current Due:</strong> ৳{remainingDue}</p>
 
-                {/* LIVE UPDATED REMAINING DUE */}
-                {paymentAmount && (
-                    <p
-                        className={`font-semibold ${
-                            updatedRemainingDue < 0 ? "text-red-600" : "text-green-700"
-                        }`}
-                    >
-                        Remaining After Payment: ৳{updatedRemainingDue.toFixed(2)}
-                    </p>
-                )}
-            </div>
+                            {/* LIVE UPDATED REMAINING DUE */}
+                            {paymentAmount && (
+                                <p
+                                    className={`font-semibold ${updatedRemainingDue < 0 ? "text-red-600" : "text-green-700"
+                                        }`}
+                                >
+                                    Remaining After Payment: ৳{updatedRemainingDue.toFixed(2)}
+                                </p>
+                            )}
+                        </div>
 
-            <input
-                type="number"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="Enter payment amount"
-                className="w-full p-2 border rounded mb-4"
-            />
+                        <input
+                            type="number"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            placeholder="Enter payment amount"
+                            className="w-full p-2 border rounded mb-4"
+                        />
 
-            {/* Error message if pay > due */}
-            {paymentAmount > remainingDue && (
-                <p className="text-red-600 text-sm mb-3">
-                    Payment cannot exceed remaining due!
-                </p>
+                        {/* Error message if pay > due */}
+                        {paymentAmount > remainingDue && (
+                            <p className="text-red-600 text-sm mb-3">
+                                Payment cannot exceed remaining due!
+                            </p>
+                        )}
+
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button
+                                onClick={() => setShowPaymentModal(false)}
+                                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleSubmitPayment}
+                                disabled={paymentAmount > remainingDue}
+                                className={`px-4 py-2 rounded text-white ${paymentAmount > remainingDue
+                                        ? "bg-gray-400 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700"
+                                    }`}
+                            >
+                                Pay
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-
-            <div className="flex justify-end gap-3 mt-4">
-                <button
-                    onClick={() => setShowPaymentModal(false)}
-                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                    Cancel
-                </button>
-
-                <button
-                    onClick={handleSubmitPayment}
-                    disabled={paymentAmount > remainingDue}
-                    className={`px-4 py-2 rounded text-white ${
-                        paymentAmount > remainingDue
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                >
-                    Pay
-                </button>
-            </div>
-        </div>
-    </div>
-)}
 
         </div>
     );
