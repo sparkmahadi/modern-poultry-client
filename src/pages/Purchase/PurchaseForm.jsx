@@ -6,6 +6,7 @@ import { InputField, SelectField } from './FormComponents';
 import ProductRow from './ProductRow';
 import AddProductModal from "../../components/AddProductModal/AddProductModal";
 import AddSupplierModal from "./AddSupplierModal"; // Assuming this is created
+import PaymentModal from "./PaymentModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -32,6 +33,7 @@ const PurchaseForm = () => {
   const [newProductName, setNewProductName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // === NEW SUPPLIER MODAL STATES ===
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
@@ -73,6 +75,12 @@ const PurchaseForm = () => {
 
   const handleCloseAddSupplierModal = () => {
     setShowAddSupplierModal(false);
+  };
+
+
+  // --- Handler for selecting payment
+  const handlePaymentSelect = ({ paymentMethod, accountId }) => {
+    setForm((prev) => ({ ...prev, payment_method: paymentMethod, account_id: accountId }));
   };
 
   // --- Calculations ---
@@ -276,12 +284,31 @@ const PurchaseForm = () => {
   const fetchAccounts = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/payment_accounts`);
-      console.log(res, "accounts");
+      console.log("accounts", res);
       setAccountList(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch accounts", err);
     }
   };
+
+  useEffect(() => {
+    if (!form.payment_method || accountList.length === 0) return;
+
+    const defaultAccount = accountList.find(
+      (acc) =>
+        acc.type === form.payment_method &&
+        acc.is_default === true
+    );
+
+    if (defaultAccount) {
+      setForm((prev) => ({
+        ...prev,
+        account_id: defaultAccount._id,
+      }));
+    }
+  }, [form.payment_method, accountList]);
+
+
 
 
 
@@ -300,7 +327,7 @@ const PurchaseForm = () => {
         supplier_id: form.supplierId,
         payment_method: form.payment_method,
         account_id: form.account_id,
-        paid_amount: Number(form.paid_amount),
+        paid_amount: Number(form.paid_amount) || 0,
 
         total_amount: totalPurchase,
 
@@ -315,9 +342,14 @@ const PurchaseForm = () => {
 
       console.log('payload', payload);
 
-      await axios.post(`${API_BASE_URL}/api/purchases`, payload);
 
-      toast.success("Purchase created successfully!");
+      const res = await axios.post(`${API_BASE_URL}/api/purchases`, payload);
+      const data = (res.data);
+      if (data.success) {
+        toast.success(data.message || "Purchase created successfully!");
+      } else {
+        toast.info(data.message)
+      }
       // resetForm();
     } catch (err) {
       console.error("Purchase failed:", err);
@@ -394,27 +426,6 @@ const PurchaseForm = () => {
               {form.supplierId && (
                 <p className="text-xs text-green-600 mt-2 font-medium">Selected Supplier ID: {form.supplierId}</p>
               )}
-            </div>
-
-            {/* Financial Status Card (Unchanged) */}
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <h2 className="text-xl font-bold text-blue-600 mb-4 border-b pb-2">Financial Status</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <InputField label="Supplier Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} />
-                  <InputField label="Your Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} />
-                </div>
-                <SelectField
-                  label="Purchase Status"
-                  name="status"
-                  value={form.status}
-                  onChange={handleChange}
-                  options={[
-                    { value: "pending", label: "Pending Payment" },
-                    { value: "paid", label: "Paid" },
-                  ]}
-                />
-              </div>
             </div>
           </div>
 
@@ -517,63 +528,32 @@ const PurchaseForm = () => {
                 </h2>
 
                 {/* Payment Method */}
-                <label className="text-sm font-medium text-gray-700">Payment Method</label>
-                <select
-                  value={form.payment_method || ""}
-                  onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
-                  required
-                >
-                  <option value="">Select Method</option>
-                  <option value="cash">Cash</option>
-                  <option value="bank">Bank</option>
-                  <option value="mobile">Mobile Wallet</option>
-                </select>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Payment Method
+                </label>
 
-                {/* Account Selection (depends on method) */}
-                {form.payment_method && (
-                  <>
-                    <label className="text-sm font-medium text-gray-700">Select Account</label>
-                    <select
-                      value={form.account_id || ""}
-                      onChange={(e) => setForm({ ...form, account_id: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                      required
-                    >
-                      <option value="">Choose Account</option>
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Select Payment & Account
+                  </button>
 
-                      {/* CASH ACCOUNTS */}
-                      {form.payment_method === "cash" &&
-                        accountList
-                          .filter((a) => a.type === "cash")
-                          .map((a) => (
-                            <option value={a._id} key={a._id}>
-                              {a.name} (Balance: {a.balance})
-                            </option>
-                          ))}
+                  {form.payment_method && form.account_id && (
+                    <p className="mt-2 text-sm text-green-700">
+                      Selected: {form.payment_method.toUpperCase()} - Account ID: {form.account_id}
+                    </p>
+                  )}
+                </div>
 
-                      {/* BANK ACCOUNTS */}
-                      {form.payment_method === "bank" &&
-                        accountList
-                          .filter((a) => a.type === "bank")
-                          .map((a) => (
-                            <option value={a._id} key={a._id}>
-                              {a.bank_name} - {a.account_number} (Balance: {a.balance})
-                            </option>
-                          ))}
-
-                      {/* MOBILE ACCOUNTS */}
-                      {form.payment_method === "mobile" &&
-                        accountList
-                          .filter((a) => a.type === "mobile")
-                          .map((a) => (
-                            <option value={a._id} key={a._id}>
-                              {a.method?.toUpperCase()} - {a.number} (Balance: {a.balance})
-                            </option>
-                          ))}
-                    </select>
-                  </>
-                )}
+                <PaymentModal
+                  isOpen={showPaymentModal}
+                  onClose={() => setShowPaymentModal(false)}
+                  onSelectPayment={handlePaymentSelect}
+                  defaultPaymentMethod={form.payment_method}
+                />
 
                 {/* Paid Amount */}
                 <InputField

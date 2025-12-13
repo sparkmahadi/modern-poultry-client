@@ -15,6 +15,15 @@ const PurchaseDueList = () => {
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState("");
 
+    const [accounts, setAccounts] = useState([]);
+    const [selectedAccountId, setSelectedAccountId] = useState("");
+
+    useEffect(() => {
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/payment_accounts`)
+            .then(res => setAccounts(res.data.data || []))
+            .catch(() => toast.error("Failed to load payment accounts"));
+    }, []);
+
 
     const fetchPurchases = useCallback(async () => {
         setLoading(true);
@@ -60,15 +69,17 @@ const PurchaseDueList = () => {
 
     const handleSubmitPayment = async () => {
         const pay = Number(paymentAmount);
-        const payment_method = "cash";
-        const due = remainingDue;
 
         if (!pay || pay <= 0) {
-            return toast.error("Enter a valid payment amount.");
+            return toast.error("Enter a valid payment amount");
         }
 
-        if (pay > due) {
-            return toast.error("Payment cannot exceed remaining due!");
+        if (!selectedAccountId) {
+            return toast.error("Select a payment account");
+        }
+
+        if (pay > remainingDue) {
+            return toast.error("Payment cannot exceed remaining due");
         }
 
         try {
@@ -76,30 +87,23 @@ const PurchaseDueList = () => {
                 `${API_BASE_URL}/pay/${selectedPurchase._id}`,
                 {
                     payAmount: pay,
-                    payment_method: payment_method || "cash"  // optional dropdown later
+                    paymentAccountId: selectedAccountId
                 }
             );
 
-            const updated = response.data.data;
-
-            // Update UI instantly
             setPurchases(prev =>
                 prev.map(p =>
-                    p._id === selectedPurchase._id
-                        ? { ...p, paid_amount: updated.paid_amount }
-                        : p
+                    p._id === selectedPurchase._id ? response.data.data : p
                 )
             );
 
-            toast.success("Payment recorded successfully!");
+            toast.success("Supplier payment recorded");
             setShowPaymentModal(false);
 
         } catch (err) {
-            console.error("Payment update failed:", err);
-            toast.error(err.response?.data?.message || "Failed to update payment.");
+            toast.error(err.response?.data?.message || "Payment failed");
         }
     };
-
 
 
 
@@ -240,6 +244,26 @@ const PurchaseDueList = () => {
                             className="w-full p-2 border rounded mb-4"
                         />
 
+                        {/* Payment Accounts */}
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                            {accounts.map(acc => (
+                                <div
+                                    key={acc._id}
+                                    onClick={() => setSelectedAccountId(acc._id)}
+                                    className={`border rounded-lg p-3 text-center cursor-pointer transition
+        ${selectedAccountId === acc._id
+                                            ? "border-blue-600 bg-blue-50"
+                                            : "border-gray-300 hover:border-blue-400"}
+      `}
+                                >
+                                    <p className="font-semibold capitalize">{acc.type}</p>
+                                    <p className="text-sm text-gray-600">{acc.name || acc.method}</p>
+                                    <p className="text-xs text-gray-500">৳ {acc.balance}</p>
+                                </div>
+                            ))}
+                        </div>
+
+
                         {/* Error message if pay > due */}
                         {paymentAmount > remainingDue && (
                             <p className="text-red-600 text-sm mb-3">
@@ -257,14 +281,16 @@ const PurchaseDueList = () => {
 
                             <button
                                 onClick={handleSubmitPayment}
-                                disabled={paymentAmount > remainingDue}
-                                className={`px-4 py-2 rounded text-white ${paymentAmount > remainingDue
+                                disabled={!selectedAccountId || paymentAmount > remainingDue}
+                                className={`px-4 py-2 rounded text-white
+    ${!selectedAccountId || paymentAmount > remainingDue
                                         ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-700"
-                                    }`}
+                                        : "bg-blue-600 hover:bg-blue-700"}
+  `}
                             >
                                 Pay
                             </button>
+
                         </div>
                     </div>
                 </div>
