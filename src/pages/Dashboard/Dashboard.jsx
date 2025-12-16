@@ -76,7 +76,7 @@ const Dashboard = () => {
         { name: t.sales, icon: ShoppingBag, href: "/sales", description: "Process orders and view sales history." },
         { name: t.purchases, icon: Receipt, href: "/purchases", description: "Record stock acquisitions and spending." },
         { name: t.transactions, icon: ClipboardList, href: "/transactions", description: "Generate business insights and data reports." },
-        { name: t.cash, icon: ClipboardList, href: "/cash", description: "Manage your cash flow and balance." },
+        { name: t.payment_accounts, icon: ClipboardList, href: "/payment_accounts", description: "Manage your payment_accounts flow and balance." },
         { name: t.reports, icon: ClipboardList, href: "/reports", description: "Generate business insights and data reports." },
         { name: t.batches, icon: ClipboardList, href: "/farm-batches", description: "Generate business insights and data reports." },
     ];

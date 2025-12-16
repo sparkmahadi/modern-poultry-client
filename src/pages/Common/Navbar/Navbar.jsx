@@ -57,8 +57,9 @@ const Navbar = () => {
     { name: t.customers, icon: List, href: '/customers' },
     { name: t.sales, icon: List, href: '/sales' },
     { name: t.purchases, icon: List, href: '/purchases' },
-    { name: "Trans", icon: List, href: '/transactions' },
-    { name: "payment_accounts", icon: List, href: '/payment_accounts' },
+    // { name: "Trans", icon: List, href: '/transactions' },
+    { name: "Inventory", icon: List, href: '/inventory' },
+    { name: "Payment A/C", icon: List, href: '/payment_accounts' },
   ];
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);

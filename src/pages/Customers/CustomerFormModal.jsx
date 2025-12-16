@@ -77,19 +77,19 @@ const CustomerFormModal = ({
 
             <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <InputField
-                label="Current Due (৳)"
-                name="due"
+                label="Opening Due (৳)"
+                name="manual_due"
                 type="number"
-                value={form.due}
+                value={form.manual_due}
                 onChange={handleChange}
                 placeholder="0"
                 min="0"
               />
               <InputField
-                label="Current Advance (৳)"
-                name="advance"
+                label="Opening Advance (৳)"
+                name="manual_advance"
                 type="number"
-                value={form.advance}
+                value={form.manual_advance}
                 onChange={handleChange}
                 placeholder="0"
                 min="0"

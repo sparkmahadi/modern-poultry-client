@@ -32,8 +32,8 @@ const MemoHeader = ({
     address: "",
     phone: "",
     type: "permanent",
-    due: 0,
-    advance: 0,
+    manual_due: 0,
+    manual_advance: 0,
     status: "active",
   };
 

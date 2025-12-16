@@ -191,7 +191,7 @@ const PurchaseManager = () => {
                 {filteredPurchases.length === 0 && <div className="p-20 text-center text-gray-400 font-medium italic">No matching records found.</div>}
             </div>
 
-            {/* Reusable Payment Modal (Logic from DueList) */}
+            {/* Reusable Payment Modal*/}
             {showPaymentModal && selectedPurchase && (
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200">

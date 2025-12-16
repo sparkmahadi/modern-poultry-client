@@ -99,6 +99,7 @@ console.log(response);
         setError(null);
         try {
             const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/customers/${batchData.farmerId}`);
+            console.log("customerdata",res.data);
             setCustomer(res.data.data);
         } catch (err) {
             console.error(err);

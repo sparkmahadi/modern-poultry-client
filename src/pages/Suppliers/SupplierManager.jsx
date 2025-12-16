@@ -1,39 +1,10 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router";
-import { Search, Plus, X, Edit, Trash2, Info } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Info, User, Phone, MapPin, Calculator, Wallet, ArrowUpRight } from 'lucide-react';
+import SupplierAddEditModal from "./SupplierAddEditModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-// ==========================================
-// 1. Modal Component (New)
-// ==========================================
-const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-
-    return (
-        <div 
-            className="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4"
-            onClick={onClose} // Close modal on backdrop click
-        >
-            <div 
-                className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300"
-                onClick={e => e.stopPropagation()} // Prevent closing on modal content click
-            >
-                <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                    <h2 className="text-2xl font-bold text-blue-600">{title}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-                <div className="p-6">
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 // ==========================================
 // 2. Helper Components (Simplified/Unchanged)
@@ -48,7 +19,7 @@ const InputField = ({ label, name, type = "text", value, onChange, placeholder, 
             value={value}
             onChange={onChange}
             placeholder={placeholder}
-            className="border border-gray-300 rounded-lg p-3 w-full focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+            className="border border-gray-300 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition duration-150"
             required={required}
         />
     </div>
@@ -61,7 +32,7 @@ const SelectField = ({ label, name, value, onChange, options, className = "" }) 
             name={name}
             value={value}
             onChange={onChange}
-            className="border border-gray-300 rounded-lg p-3 w-full bg-white focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+            className="border border-gray-300 rounded-lg p-3 w-full bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition duration-150"
         >
             {options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -83,8 +54,8 @@ const SupplierManager = () => {
         address: "",
         phone: "",
         type: "regular",
-        due: 0,
-        advance: 0,
+        manual_due: 0,
+        manual_advance: 0,
         status: "active",
     };
 
@@ -94,7 +65,7 @@ const SupplierManager = () => {
     const [editingId, setEditingId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // NEW MODAL STATE
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchSuppliers();
@@ -123,7 +94,7 @@ const SupplierManager = () => {
     const resetForm = () => {
         setForm(initialFormState);
         setEditingId(null);
-        setIsModalOpen(false); // Close modal on reset
+        setIsModalOpen(false);
     };
 
     const handleSubmit = async (e) => {
@@ -146,14 +117,12 @@ const SupplierManager = () => {
         }
     };
 
-    // Open modal for editing
     const handleEdit = (supplier) => {
         setForm(supplier);
         setEditingId(supplier._id);
-        setIsModalOpen(true); // Open modal
+        setIsModalOpen(true);
     };
     
-    // Open modal for adding
     const handleAdd = () => {
         resetForm();
         setIsModalOpen(true);
@@ -171,25 +140,20 @@ const SupplierManager = () => {
     };
 
     const getStatusBadge = (status) => {
-        const color = status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-        return <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color} capitalize`}>{status}</span>;
+        const color = status === 'active' ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' : 'bg-rose-100 text-rose-700 ring-1 ring-rose-200';
+        return <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${color}`}>{status}</span>;
     };
 
     const getBalanceStyle = (due, advance) => {
         const balance = due - advance;
-        if (balance > 0) return { className: 'text-red-600 font-bold', label: `Payable: ৳${balance.toFixed(2)}` };
-        if (balance < 0) return { className: 'text-green-600 font-bold', label: `Receivable: ৳${Math.abs(balance).toFixed(2)}` };
-        return { className: 'text-gray-500', label: 'Settled' };
+        if (balance > 0) return { className: 'text-rose-600 font-bold', label: `৳${balance.toFixed(2)}`, sub: 'Payable' };
+        if (balance < 0) return { className: 'text-emerald-600 font-bold', label: `৳${Math.abs(balance).toFixed(2)}`, sub: 'Receivable' };
+        return { className: 'text-slate-400 font-medium', label: '৳0.00', sub: 'Settled' };
     };
 
-    // Client-Side Filtering
     const filteredSuppliers = useMemo(() => {
-        if (!searchTerm) {
-            return suppliers;
-        }
-
+        if (!searchTerm) return suppliers;
         const lowerCaseSearch = searchTerm.toLowerCase();
-
         return suppliers.filter(supplier => (
             supplier.name.toLowerCase().includes(lowerCaseSearch) ||
             supplier.phone.toLowerCase().includes(lowerCaseSearch) ||
@@ -198,128 +162,150 @@ const SupplierManager = () => {
         ));
     }, [suppliers, searchTerm]);
     
-    // Calculate Totals for the bottom summary (as per image)
-    const totalDue = filteredSuppliers.reduce((sum, sup) => sum + sup.due, 0);
-    const totalAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup.advance, 0);
+    const totalManualDue = filteredSuppliers.reduce((sum, sup) => sum + sup.manual_due, 0);
+    const totalManualAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup.manual_advance, 0);
+    const totalSystemDue = filteredSuppliers.reduce((sum, sup) => sum + sup.due, 0);
+    const totalSystemAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup.advance, 0);
+    const totalDue = totalManualDue + totalSystemDue;
+    const totalAdvance = totalManualAdvance + totalSystemAdvance;
     const netBalance = totalDue - totalAdvance;
 
     return (
-        <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-            {/* ============================================== */}
-            {/* === Main Content: Supplier List Area === */}
-            {/* ============================================== */}
-            
-            <div className="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h1 className="text-3xl font-extrabold text-gray-800">Suppliers List</h1>
-                    <button
-                        onClick={handleAdd}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition duration-150"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Supplier
-                    </button>
+        <div className="p-4 md:p-6 bg-[#f8fafc] min-h-screen font-sans">
+            <div className="max-w-[1600px] mx-auto space-y-6">
+                
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Supplier Directory</h1>
+                        <p className="text-slate-500 text-sm mt-1">Manage vendor accounts, outstanding balances, and purchase history.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="relative flex-1 md:w-80">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search suppliers..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                            />
+                        </div>
+                        <button
+                            onClick={handleAdd}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200"
+                        >
+                            <Plus className="w-4 h-4" /> Add Supplier
+                        </button>
+                    </div>
+                </div>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-rose-50 rounded-xl text-rose-600"><Calculator className="w-6 h-6" /></div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Payable</p>
+                            <p className="text-xl font-black text-slate-800">৳{totalDue.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600"><Wallet className="w-6 h-6" /></div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Paid</p>
+                            <p className="text-xl font-black text-slate-800">৳{totalAdvance.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div className={`bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 ring-2 ring-inset ${netBalance >= 0 ? 'ring-rose-100' : 'ring-emerald-100'}`}>
+                        <div className={`p-3 rounded-xl ${netBalance >= 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}><ArrowUpRight className="w-6 h-6" /></div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Portfolio Balance</p>
+                            <p className={`text-xl font-black ${netBalance >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>৳{Math.abs(netBalance).toLocaleString()}</p>
+                        </div>
+                    </div>
                 </div>
 
                 {error && (
-                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-                        <p className="font-bold">Error:</p>
-                        <p>{error}</p>
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                        <p className="text-sm font-medium">{error}</p>
                     </div>
                 )}
-                
-                {/* Search and List */}
-                <div className="mb-4 relative max-w-sm">
-                    <input
-                        type="text"
-                        placeholder="Search by name, phone, or address..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
-                
-                {isLoading && !suppliers.length ? (
-                    <div className="text-center py-10 text-gray-500">Loading data...</div>
-                ) : filteredSuppliers.length === 0 && searchTerm ? (
-                    <div className="text-center py-10 text-gray-500">
-                        No suppliers found matching "{searchTerm}".
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto border rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">SL</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provided Products (Info)</th> {/* Added (Info) column to match the image */}
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount (Due)</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Paid (Advance)</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Due / Balance</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Last Purchased</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+
+                {/* Main Table Area */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-500 uppercase text-[11px] font-bold tracking-widest">
+                                    <th className="px-6 py-4 w-12 text-center">#</th>
+                                    <th className="px-6 py-4">Supplier Identity</th>
+                                    <th className="px-6 py-4">Catalog</th>
+                                    <th className="px-4 py-4 text-right bg-rose-50/30">Manual (D/A)</th>
+                                    <th className="px-4 py-4 text-right bg-blue-50/30">System (D/A)</th>
+                                    <th className="px-4 py-4 text-right">Aggregated (D/A)</th>
+                                    <th className="px-6 py-4 text-right">Net Balance</th>
+                                    <th className="px-6 py-4 text-center">Last Purchase</th>
+                                    <th className="px-6 py-4 text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredSuppliers.map((sup, index) => {
-                                    const balanceInfo = getBalanceStyle(sup.due, sup.advance);
+                            <tbody className="divide-y divide-slate-100">
+                                {isLoading && !suppliers.length ? (
+                                    <tr><td colSpan="9" className="text-center py-20 text-slate-400 italic">Fetching records...</td></tr>
+                                ) : filteredSuppliers.length === 0 ? (
+                                    <tr><td colSpan="9" className="text-center py-20 text-slate-400">No matching supplier records found.</td></tr>
+                                ) : filteredSuppliers.map((sup, index) => {
+                                    const combinedDue = parseFloat(sup.manual_due) + parseFloat(sup.due);
+                                    const combinedAdv = parseFloat(sup.manual_advance) + parseFloat(sup.advance);
+                                    const balanceInfo = getBalanceStyle(combinedDue, combinedAdv);
+                                    
                                     return (
-                                        <tr key={sup._id} className="hover:bg-yellow-50/50 transition-colors">
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-semibold text-gray-900">{sup.name}</div>
-                                                <div className="text-xs text-gray-500">{sup.phone}</div>
-                                                {/* <div className="text-xs text-gray-500 truncate max-w-xs">{sup.address}</div> */}
-                                                <div className="mt-1">{getStatusBadge(sup.status)}</div>
+                                        <tr key={sup._id} className="hover:bg-slate-50/80 transition-colors group">
+                                            <td className="px-6 py-4 text-center text-xs font-bold text-slate-400">{index + 1}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{sup.name}</span>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><Phone className="w-3 h-3"/> {sup.phone || 'N/A'}</span>
+                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><MapPin className="w-3 h-3"/> {sup.address || 'Global'}</span>
+                                                    </div>
+                                                    <div className="mt-2">{getStatusBadge(sup.status)}</div>
+                                                </div>
                                             </td>
-                                            {/* Simulated 'Provided Products' - Could be a link to product details */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                <button className="text-blue-600 hover:underline text-xs flex items-center gap-1">
-                                                    <Info className="w-3 h-3"/> View Products
+                                            <td className="px-6 py-4">
+                                                <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white transition-all text-xs font-bold">
+                                                    <Info className="w-3.5 h-3.5"/> View Products
                                                 </button>
                                             </td>
-                                            {/* Total Amount (Due) */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium text-red-700">
-                                                ৳{sup.due.toFixed(2)}
+                                            {/* Manual */}
+                                            <td className="px-4 py-4 text-right bg-rose-50/20">
+                                                <div className="text-xs font-bold text-rose-700">৳{sup.manual_due.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup.manual_advance.toFixed(2)}</div>
                                             </td>
-                                            {/* Total Paid (Advance) */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium text-green-700">
-                                                ৳{sup.advance.toFixed(2)}
+                                            {/* System */}
+                                            <td className="px-4 py-4 text-right bg-blue-50/20">
+                                                <div className="text-xs font-bold text-blue-700">৳{sup.due.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup.advance.toFixed(2)}</div>
                                             </td>
-                                            {/* Total Due / Balance (Net Balance) */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                                            {/* Aggregated */}
+                                            <td className="px-4 py-4 text-right">
+                                                <div className="text-xs font-black text-slate-700">৳{combinedDue.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-bold">৳{combinedAdv.toFixed(2)}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
                                                 <div className={`text-sm ${balanceInfo.className}`}>{balanceInfo.label}</div>
+                                                <div className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{balanceInfo.sub}</div>
                                             </td>
-                                            {/* Last Purchased - Placeholder date */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                                                {/* Replace with actual last purchase date logic */}
-                                                {index % 2 === 0 ? 'N/A' : '2025-12-01'} 
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="px-2 py-1 rounded bg-slate-100 text-slate-500 text-[11px] font-bold italic">
+                                                    {index % 2 === 0 ? '—' : 'Dec 01, 2025'}
+                                                </span>
                                             </td>
-                                            {/* Actions (Details/Delete in image = Details/Edit/Delete here) */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                                <div className="flex justify-center space-x-2">
-                                                    <button
-                                                        className="text-blue-600 hover:text-blue-900 transition p-1"
-                                                        onClick={() => navigate(`/suppliers/${sup._id}`)} // Placeholder route
-                                                        title="View Details"
-                                                    >
-                                                        <Info className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        className="text-yellow-600 hover:text-yellow-900 transition p-1"
-                                                        onClick={() => handleEdit(sup)}
-                                                        title="Edit Supplier"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        className="text-red-600 hover:text-red-900 transition p-1"
-                                                        onClick={() => handleDelete(sup._id)}
-                                                        title="Delete Supplier"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-center items-center gap-1">
+                                                    <button onClick={() => navigate(`/suppliers/${sup._id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Profile"><User className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleEdit(sup)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit Data"><Edit className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDelete(sup._id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Remove"><Trash2 className="w-4 h-4" /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -328,117 +314,50 @@ const SupplierManager = () => {
                             </tbody>
                         </table>
                     </div>
-                )}
-                
-                {/* Total Section (Mimicking the image) */}
-                <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center text-lg font-bold">
-                    <div className="text-gray-800">Total</div>
-                    <div className="flex space-x-8 text-right">
-                        <div className="text-red-700">Total Due: ৳{totalDue.toFixed(2)}</div>
-                        <div className="text-green-700">Total Paid: ৳{totalAdvance.toFixed(2)}</div>
-                        <div className={netBalance >= 0 ? 'text-red-600' : 'text-green-600'}>
-                            Net Balance: ৳{Math.abs(netBalance).toFixed(2)} ({netBalance >= 0 ? 'Payable' : 'Receivable'})
-                        </div>
-                    </div>
                 </div>
-
-                {!isLoading && suppliers.length === 0 && !searchTerm && (
-                    <div className="text-center py-10 text-gray-500">No suppliers recorded yet.</div>
-                )}
             </div>
 
-            {/* ============================================== */}
-            {/* === Modal for Add/Edit Supplier === */}
-            {/* ============================================== */}
-            <Modal
+            {/* Modal - Kept exactly as instructed but rendering within current state */}
+            <SupplierAddEditModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editingId ? "✏️ Edit Supplier" : "➕ Add New Supplier"}
+                title={editingId ? "✏️ Edit Supplier Record" : "➕ Register New Supplier"}
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <InputField
-                        label="Supplier Name"
-                        name="name"
-                        value={form.name}
-                        onChange={handleChange}
-                        placeholder="Company Name / Contact Person"
-                        required
-                    />
+                    <InputField label="Supplier/Company Name" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Acme Corp" required />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InputField
-                            label="Phone"
-                            name="phone"
-                            value={form.phone}
-                            onChange={handleChange}
-                            placeholder="01xxxxxxxxx"
-                        />
-                        <SelectField
-                            label="Supplier Type"
-                            name="type"
-                            value={form.type}
-                            onChange={handleChange}
-                            options={[
-                                { value: "regular", label: "Regular" },
-                                { value: "onetime", label: "One-Time" },
-                                { value: "international", label: "International" },
-                            ]}
-                        />
+                        <InputField label="Primary Phone" name="phone" value={form.phone} onChange={handleChange} placeholder="01xxxxxxxxx" />
+                        <SelectField label="Supplier Type" name="type" value={form.type} onChange={handleChange} options={[
+                            { value: "regular", label: "Regular Vendor" },
+                            { value: "onetime", label: "One-Time Vendor" },
+                            { value: "international", label: "International Import" },
+                        ]} />
                     </div>
-                    <InputField
-                        label="Address"
-                        name="address"
-                        value={form.address}
-                        onChange={handleChange}
-                        placeholder="Business Address / Location"
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
-                        <InputField
-                            label="Current Payable (৳)"
-                            name="due"
-                            type="number"
-                            value={form.due}
-                            onChange={handleChange}
-                            placeholder="0"
-                        />
-                        <InputField
-                            label="Current Receivable (৳)"
-                            name="advance"
-                            type="number"
-                            value={form.advance}
-                            onChange={handleChange}
-                            placeholder="0"
-                        />
+                    <InputField label="Operational Address" name="address" value={form.address} onChange={handleChange} placeholder="City, State, Country" />
+                    
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2">Manual Ledger Adjustments</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <InputField label="Opening Payable (৳)" name="manual_due" type="number" value={form.manual_due} onChange={handleChange} />
+                            <InputField label="Opening Receivable (৳)" name="manual_advance" type="number" value={form.manual_advance} onChange={handleChange} />
+                        </div>
                     </div>
-                    <SelectField
-                        label="Status"
-                        name="status"
-                        value={form.status}
-                        onChange={handleChange}
-                        options={[
-                            { value: "active", label: "Active" },
-                            { value: "inactive", label: "Inactive" },
-                        ]}
-                    />
-                    <div className="flex gap-3 pt-2">
-                        <button
-                            type="submit"
-                            className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-blue-700 transition duration-150 disabled:opacity-50"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'Saving...' : editingId ? "Update Supplier" : "Add Supplier"}
+
+                    <SelectField label="Account Status" name="status" value={form.status} onChange={handleChange} options={[
+                        { value: "active", label: "Active" },
+                        { value: "inactive", label: "On-Hold" },
+                    ]} />
+
+                    <div className="flex gap-3 pt-4">
+                        <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50">
+                            {isLoading ? 'Processing...' : editingId ? "Save Changes" : "Confirm Registration"}
                         </button>
-                        {(editingId || !isLoading) && (
-                             <button
-                                 type="button"
-                                 onClick={resetForm}
-                                 className="bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-300 transition duration-150"
-                             >
-                                 Cancel
-                             </button>
-                        )}
+                        <button type="button" onClick={resetForm} className="px-6 py-3 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">
+                            Cancel
+                        </button>
                     </div>
                 </form>
-            </Modal>
+            </SupplierAddEditModal>
         </div>
     );
 };

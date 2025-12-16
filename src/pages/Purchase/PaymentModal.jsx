@@ -4,10 +4,10 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const PaymentModal = ({ isOpen, onClose, onSelectPayment, defaultPaymentMethod }) => {
+const PaymentModal = ({ isOpen, onClose, onSelectPayment, defaultPaymentMethod, defaultSelectedAccount }) => {
   const [paymentMethod, setPaymentMethod] = useState(defaultPaymentMethod || "");
   const [accountList, setAccountList] = useState([]);
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState(defaultSelectedAccount);
 
   useEffect(() => {
     if (isOpen) fetchAccounts();
