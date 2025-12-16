@@ -73,7 +73,7 @@ const InventoryViewer = () => {
         let value = editFormData[key];
         if (value !== undefined && value !== null && value !== '') {
             // Convert numerical fields to numbers
-            if (['total_stock_qty', 'sale_price', 'last_purchase_price', 'reorder_level'].includes(key)) {
+            if (['stock_qty', 'sale_price', 'last_purchase_price', 'reorder_level'].includes(key)) {
                 value = parseFloat(value);
                 if (isNaN(value)) continue; // Skip if it's not a valid number
             }
@@ -132,7 +132,7 @@ const InventoryViewer = () => {
     setEditingItem(item);
     setEditFormData({
       item_name: item.item_name || '',
-      total_stock_qty: item.total_stock_qty ?? 0,
+      stock_qty: item.stock_qty ?? 0,
       sale_price: item.sale_price ?? '',
       last_purchase_price: item.last_purchase_price ?? '',
       reorder_level: item.reorder_level ?? 0,
@@ -208,7 +208,7 @@ const InventoryViewer = () => {
           {inventory.map((item, index) => {
             const id = getItemId(item, index);
             const itemName = item.item_name || `Item ${id}`;
-            const stockQty = item.total_stock_qty ?? 0; // Use 0 if null/undefined
+            const stockQty = item.stock_qty ?? 0; // Use 0 if null/undefined
             const salePrice = item.sale_price;
             const lastPurchasePrice = item.last_purchase_price;
             const reorderLevel = item.reorder_level ?? 0;
@@ -234,7 +234,7 @@ const InventoryViewer = () => {
                   
                   <div className="space-y-3">
                     
-                    {/* Quantity - total_stock_qty */}
+                    {/* Quantity - stock_qty */}
                     <div className="flex items-center text-gray-700">
                       <span className="font-medium w-36">Stock Qty:</span>
                       <span className={`text-xl font-extrabold ml-2 ${isOutOfStock ? 'text-red-600' : 'text-gray-900'}`}>
@@ -331,12 +331,12 @@ const InventoryViewer = () => {
 
               {/* Total Stock Quantity */}
               <div>
-                <label htmlFor="total_stock_qty" className="block text-sm font-medium text-gray-700">Total Stock Quantity (units)</label>
+                <label htmlFor="stock_qty" className="block text-sm font-medium text-gray-700">Total Stock Quantity (units)</label>
                 <input
                   type="number"
-                  name="total_stock_qty"
-                  id="total_stock_qty"
-                  value={editFormData.total_stock_qty ?? 0}
+                  name="stock_qty"
+                  id="stock_qty"
+                  value={editFormData.stock_qty ?? 0}
                   onChange={handleFormChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
                   min="0"
