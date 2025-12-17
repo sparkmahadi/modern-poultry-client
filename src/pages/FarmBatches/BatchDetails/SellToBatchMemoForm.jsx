@@ -123,21 +123,22 @@ const SellToBatchMemoForm = ({ batchData, selectedCustomer }) => {
         const payload = {
             memoNo,
             date,
-            customer: { _id: selectedCustomer._id, name: selectedCustomer.name },
+            customer_id:  selectedCustomer._id,
             products: selectedProducts.map(p => ({
-                _id: p._id,
-                item_name: p.item_name,
+                product_id: p._id,
                 qty: p.qty,
-                price: p.price,
+                sale_price: p.price,
                 subtotal: p.subtotal,
             })),
-            total: Number(total.toFixed(2)),
-            paidAmount: Number(paymentForm.paid_amount.toFixed(2)),
-            due: Number(due.toFixed(2)),
-            // New fields for accounting
+            total_amount: total,
+            paid_amount: Number(paymentForm.paid_amount.toFixed(2)),
             payment_method: paymentForm.payment_method,
-            account_id: paymentForm.account_id
+            account_id: paymentForm.account_id,
+            payment_due: Number(due.toFixed(2)),
+            batch_id : batchData?._id,
         };
+
+        console.log(payload);
 
         try {
             // 1. Create Sale

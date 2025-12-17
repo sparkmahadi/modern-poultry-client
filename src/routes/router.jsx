@@ -11,7 +11,6 @@ import CategoryDetail from './../pages/Categories/CategoryDetail';
 import CreateSell from '../pages/Sales/CreateSell/CreateSell';
 import CustomerManager from '../pages/Customers/CustomerManager';
 import PurchaseForm from '../pages/Purchase/PurchaseForm';
-import SalesList from './../pages/Sales/SalesList/SalesList';
 import SupplierManager from './../pages/Suppliers/SupplierManager';
 import Dashboard from './../pages/Dashboard/Dashboard';
 import SupplierDetails from './../pages/Suppliers/SupplierDetails';
@@ -31,6 +30,7 @@ import PurchaseDueList from '../pages/Purchase/Deprecated/PurchaseDueList/Purcha
 import PaymentAccounts from '../pages/PaymentAccounts/PaymentAccounts';
 import CreatePaymentAccount from '../pages/PaymentAccounts/CreatePaymentAccount';
 import PurchaseManager from '../pages/Purchase/PurchaseManager';
+import SalesManager from '../pages/Sales/SalesManager/SalesManager';
 
 const router = createBrowserRouter([
   {
@@ -58,7 +58,7 @@ const router = createBrowserRouter([
       { path: "/products/details/:id", element: <ProductDetail /> },
       { path: '/categories/:id', element: <CategoryDetail /> },
 
-      { path: '/sales', element: <SalesList /> },
+      { path: '/sales', element: <SalesManager /> },
       { path: '/sales/:saleId', element: <SaleDetails /> },
       { path: '/sales/daily-sales', element: <DailySales /> },
       { path: '/sales/daily-cash-sales', element: <DailyCashSales /> },

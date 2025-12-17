@@ -165,6 +165,19 @@ const SalesManager = () => {
     );
 };
 
+
+    // --- Action Handlers ---
+    const handleDeleteSale = async (id) => {
+        if (!window.confirm("Delete this purchase? This affects inventory.")) return;
+        try {
+            await axios.delete(`${SALES_API}/${id}`);
+            // setPurchases(prev => prev.filter(p => p._id !== id));
+            toast.success('Deleted successfully');
+        } catch (err) {
+            toast.error('Delete failed');
+        }
+    };
+
 // --- INTERNAL UI COMPONENTS ---
 
 const StatCard = ({ label, value, color }) => (
@@ -201,6 +214,7 @@ const TableRow = ({ memo, isExpanded, onToggle, onCollect, onView }) => {
                         </button>
                     )}
                     <button onClick={onView} className="text-indigo-500 hover:text-indigo-700 font-bold text-sm">View</button>
+                    <button onClick={()=>handleDeleteSale(memo._id)} className="text-red-500 hover:text-indigo-700 font-bold text-sm">Delete</button>
                 </td>
             </tr>
             {isExpanded && (

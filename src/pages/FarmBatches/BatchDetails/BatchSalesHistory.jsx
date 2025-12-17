@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
 const BatchSalesHistory = ({ batchId }) => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (batchId) fetchSales();
@@ -14,6 +16,7 @@ const BatchSalesHistory = ({ batchId }) => {
     const fetchSales = async () => {
         try {
             const res = await axios.get(`${API}/api/batches/${batchId}/sales`);
+            console.log(res.data.sales);
             if (res.data.success) {
                 setSales(res.data.sales);
             }
@@ -50,9 +53,9 @@ const BatchSalesHistory = ({ batchId }) => {
         return <p className="p-4 text-gray-600">No sales recorded for this batch.</p>;
 
     // --- Summary ---
-    const totalAmount = sales.reduce((sum, s) => sum + (s.total || 0), 0);
-    const totalPaid = sales.reduce((sum, s) => sum + (s.paidAmount || 0), 0);
-    const totalDue = sales.reduce((sum, s) => sum + (s.due || 0), 0);
+    const totalAmount = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const totalPaid = sales.reduce((sum, s) => sum + (s.paid_amount || 0), 0);
+    const totalDue = sales.reduce((sum, s) => sum + (s.due_amount || 0), 0);
 
     return (
         <div className="p-4 border rounded-lg mt-6 bg-white shadow-sm">
@@ -77,13 +80,13 @@ const BatchSalesHistory = ({ batchId }) => {
                                 {new Date(sale.date).toLocaleDateString()}
                             </td>
                             <td className="p-2 border">{sale.memoNo}</td>
-                            <td className="p-2 border">{sale.total}</td>
-                            <td className="p-2 border">{sale.paidAmount}</td>
-                            <td className="p-2 border">{sale.due}</td>
+                            <td className="p-2 border">{sale.total_amount}</td>
+                            <td className="p-2 border">{sale.paid_amount}</td>
+                            <td className="p-2 border">{sale.due_amount}</td>
                             <td className="p-2 border text-center">
                                 <button
                                     className="px-2 py-1 bg-green-500 text-white rounded text-xs"
-                                    onClick={() => deleteSale(sale._id)}
+                                    onClick={() => navigate(`/sales/${sale._id}`)}
                                 >
                                     View Details
                                 </button>
