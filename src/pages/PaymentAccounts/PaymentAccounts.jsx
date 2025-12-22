@@ -119,6 +119,7 @@ const PaymentAccounts = () => {
         account_id: activeTxAccount._id,
         type: txType,
         transaction_type: txType === "add" ? "credit" : "debit",
+        entry_source: "Owner's" + txType === "add" ? "deposit" : "drawing",
         amount,
         remarks:
           txRemarks ||

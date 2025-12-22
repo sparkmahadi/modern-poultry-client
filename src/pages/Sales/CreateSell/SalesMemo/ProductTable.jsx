@@ -102,12 +102,12 @@ const ProductTable = ({
                   <td>
                     {/* Display the Available Stock */}
                     <span style={{ color: p.qty > p.availableStock ? 'red' : 'green', fontWeight: 'bold', }}>
-                      {p.availableStock - p.qty}
+                      {(p.availableStock - p.qty) || "-"}
                     </span>
                   </td>
 
                   <td className="p-3 align-top">
-                    <div className="font-semibold text-gray-800">{p.item_name}</div>
+                    <div className="font-semibold text-gray-800">{p.item_name || p?.name}</div>
                     {p.alias && <div className="text-xs text-gray-500">{p.alias}</div>}
                   </td>
 

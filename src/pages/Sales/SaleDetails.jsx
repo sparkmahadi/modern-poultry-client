@@ -57,7 +57,7 @@ const SaleDetails = () => {
             const res = await axios.get(`${API_BASE_URL}/api/sales/${saleId}`);
             if (res.data.success) {
                 const s = res.data.sale;
-                
+                console.log(s);
                 // Map backend keys to Form State
                 setMemoNo(s.memoNo);
                 setDate(new Date(s.date).toISOString().split("T")[0]);
@@ -94,6 +94,20 @@ const SaleDetails = () => {
         if (saleId) fetchSale();
     }, [fetchSale]);
 
+
+        // Product Search Logic
+    useEffect(() => {
+        const delay = setTimeout(() => {
+            const q = search.trim();
+            if (!q) return setSearchResults([]);
+            axios.get(`${API_BASE_URL}/api/products/search?q=${encodeURIComponent(q)}`)
+                .then(res => setSearchResults(res.data.data || []))
+                .catch(() => setSearchResults([]));
+        }, 300);
+        return () => clearTimeout(delay);
+    }, [search]);
+
+    
     // --- Calculations ---
     const total = selectedProducts.reduce((acc, p) => acc + Number(p.subtotal || 0), 0);
     const due = Number(total.toFixed(2)) - Number(form.paid_amount || 0);
@@ -143,7 +157,8 @@ const SaleDetails = () => {
             date, 
             customer_id: selectedCustomer._id,
             products: selectedProducts.map(p => ({ 
-                product_id: p._id, 
+                product_id: p._id,
+                name:p.item_name, 
                 qty: p.qty, 
                 sale_price: p.price, 
                 subtotal: p.subtotal 
@@ -195,6 +210,7 @@ const SaleDetails = () => {
                     updatePrice={updatePrice} 
                     isCheckingStock={isCheckingStock} 
                 />
+
 
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-white border-t">
                     <div className="space-y-4">

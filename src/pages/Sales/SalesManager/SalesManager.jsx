@@ -172,6 +172,7 @@ const SalesManager = () => {
         try {
             await axios.delete(`${SALES_API}/${id}`);
             // setPurchases(prev => prev.filter(p => p._id !== id));
+            
             toast.success('Deleted successfully');
         } catch (err) {
             toast.error('Delete failed');

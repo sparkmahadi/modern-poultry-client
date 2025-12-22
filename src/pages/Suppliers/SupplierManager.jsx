@@ -146,8 +146,8 @@ const SupplierManager = () => {
 
     const getBalanceStyle = (due, advance) => {
         const balance = due - advance;
-        if (balance > 0) return { className: 'text-rose-600 font-bold', label: `৳${balance.toFixed(2)}`, sub: 'Payable' };
-        if (balance < 0) return { className: 'text-emerald-600 font-bold', label: `৳${Math.abs(balance).toFixed(2)}`, sub: 'Receivable' };
+        if (balance > 0) return { className: 'text-rose-600 font-bold', label: `৳${balance?.toFixed(2)}`, sub: 'Payable' };
+        if (balance < 0) return { className: 'text-emerald-600 font-bold', label: `৳${Math.abs(balance)?.toFixed(2)}`, sub: 'Receivable' };
         return { className: 'text-slate-400 font-medium', label: '৳0.00', sub: 'Settled' };
     };
 
@@ -162,10 +162,10 @@ const SupplierManager = () => {
         ));
     }, [suppliers, searchTerm]);
     
-    const totalManualDue = filteredSuppliers.reduce((sum, sup) => sum + sup.manual_due, 0);
-    const totalManualAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup.manual_advance, 0);
-    const totalSystemDue = filteredSuppliers.reduce((sum, sup) => sum + sup.due, 0);
-    const totalSystemAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup.advance, 0);
+    const totalManualDue = filteredSuppliers.reduce((sum, sup) => sum + sup?.manual_due, 0);
+    const totalManualAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup?.manual_advance, 0);
+    const totalSystemDue = filteredSuppliers.reduce((sum, sup) => sum + sup?.due, 0);
+    const totalSystemAdvance = filteredSuppliers.reduce((sum, sup) => sum + sup?.advance, 0);
     const totalDue = totalManualDue + totalSystemDue;
     const totalAdvance = totalManualAdvance + totalSystemAdvance;
     const netBalance = totalDue - totalAdvance;
@@ -250,26 +250,26 @@ const SupplierManager = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {isLoading && !suppliers.length ? (
+                                {isLoading && !suppliers?.length ? (
                                     <tr><td colSpan="9" className="text-center py-20 text-slate-400 italic">Fetching records...</td></tr>
-                                ) : filteredSuppliers.length === 0 ? (
+                                ) : filteredSuppliers?.length === 0 ? (
                                     <tr><td colSpan="9" className="text-center py-20 text-slate-400">No matching supplier records found.</td></tr>
-                                ) : filteredSuppliers.map((sup, index) => {
-                                    const combinedDue = parseFloat(sup.manual_due) + parseFloat(sup.due);
-                                    const combinedAdv = parseFloat(sup.manual_advance) + parseFloat(sup.advance);
+                                ) : filteredSuppliers?.map((sup, index) => {
+                                    const combinedDue = parseFloat(sup?.manual_due) + parseFloat(sup?.due);
+                                    const combinedAdv = parseFloat(sup?.manual_advance) + parseFloat(sup?.advance);
                                     const balanceInfo = getBalanceStyle(combinedDue, combinedAdv);
                                     
                                     return (
-                                        <tr key={sup._id} className="hover:bg-slate-50/80 transition-colors group">
+                                        <tr key={sup?._id} className="hover:bg-slate-50/80 transition-colors group">
                                             <td className="px-6 py-4 text-center text-xs font-bold text-slate-400">{index + 1}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{sup.name}</span>
+                                                    <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{sup?.name}</span>
                                                     <div className="flex items-center gap-3 mt-1.5">
-                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><Phone className="w-3 h-3"/> {sup.phone || 'N/A'}</span>
-                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><MapPin className="w-3 h-3"/> {sup.address || 'Global'}</span>
+                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><Phone className="w-3 h-3"/> {sup?.phone || 'N/A'}</span>
+                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium"><MapPin className="w-3 h-3"/> {sup?.address || 'Global'}</span>
                                                     </div>
-                                                    <div className="mt-2">{getStatusBadge(sup.status)}</div>
+                                                    <div className="mt-2">{getStatusBadge(sup?.status)}</div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -279,18 +279,18 @@ const SupplierManager = () => {
                                             </td>
                                             {/* Manual */}
                                             <td className="px-4 py-4 text-right bg-rose-50/20">
-                                                <div className="text-xs font-bold text-rose-700">৳{sup.manual_due.toFixed(2)}</div>
-                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup.manual_advance.toFixed(2)}</div>
+                                                <div className="text-xs font-bold text-rose-700">৳{sup?.manual_due?.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup?.manual_advance?.toFixed(2)}</div>
                                             </td>
                                             {/* System */}
                                             <td className="px-4 py-4 text-right bg-blue-50/20">
-                                                <div className="text-xs font-bold text-blue-700">৳{sup.due.toFixed(2)}</div>
-                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup.advance.toFixed(2)}</div>
+                                                <div className="text-xs font-bold text-blue-700">৳{sup?.due?.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-medium">৳{sup?.advance?.toFixed(2)}</div>
                                             </td>
                                             {/* Aggregated */}
                                             <td className="px-4 py-4 text-right">
-                                                <div className="text-xs font-black text-slate-700">৳{combinedDue.toFixed(2)}</div>
-                                                <div className="text-[10px] text-emerald-600 font-bold">৳{combinedAdv.toFixed(2)}</div>
+                                                <div className="text-xs font-black text-slate-700">৳{combinedDue?.toFixed(2)}</div>
+                                                <div className="text-[10px] text-emerald-600 font-bold">৳{combinedAdv?.toFixed(2)}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className={`text-sm ${balanceInfo.className}`}>{balanceInfo.label}</div>
@@ -303,9 +303,9 @@ const SupplierManager = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center items-center gap-1">
-                                                    <button onClick={() => navigate(`/suppliers/${sup._id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Profile"><User className="w-4 h-4" /></button>
+                                                    <button onClick={() => navigate(`/suppliers/${sup?._id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Profile"><User className="w-4 h-4" /></button>
                                                     <button onClick={() => handleEdit(sup)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit Data"><Edit className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleDelete(sup._id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Remove"><Trash2 className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDelete(sup?._id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Remove"><Trash2 className="w-4 h-4" /></button>
                                                 </div>
                                             </td>
                                         </tr>

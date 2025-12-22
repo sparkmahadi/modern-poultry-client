@@ -216,6 +216,9 @@ const TransactionsList = () => {
                 Balance After
               </th>
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Remarks
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -254,6 +257,9 @@ const TransactionsList = () => {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-semibold text-gray-800">
                     {formatAmount(tx.balance_after_transaction)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-semibold text-gray-800">
+                    {(tx.remarks)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                     <button

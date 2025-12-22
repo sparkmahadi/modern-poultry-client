@@ -21,6 +21,7 @@ const MemoForm = () => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [error, setError] = useState("");
     
     // Product Search & Selection
     const [search, setSearch] = useState("");
@@ -109,7 +110,7 @@ const MemoForm = () => {
 
         const payload = {
             memoNo, date, customer_id: selectedCustomer._id,
-            products: selectedProducts.map(p => ({ product_id: p._id, qty: p.qty, sale_price: p.price, subtotal: p.subtotal })),
+            products: selectedProducts.map(p => ({ product_id: p._id, qty: p.qty, sale_price: p.price, subtotal: p.subtotal, name:p.item_name })),
             total_amount: total,
             paid_amount: form.paid_amount,
             payment_method: form.payment_method,
@@ -119,8 +120,12 @@ const MemoForm = () => {
 
         try {
             const res = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
-            if (res.data.success) toast.success(t.saveSuccess);
-        } catch (err) { toast.error("Save failed"); }
+            if (res.data.success) {
+                toast.success(t.saveSuccess)
+            } else{
+                toast.info(res.data.message);
+            }
+        } catch (err) { toast.error("Save Failed -" + err.response.data.message); }
     };
 
     return (
