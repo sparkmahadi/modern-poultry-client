@@ -107,7 +107,7 @@ const SaleDetails = () => {
         return () => clearTimeout(delay);
     }, [search]);
 
-    
+    vsc
     // --- Calculations ---
     const total = selectedProducts.reduce((acc, p) => acc + Number(p.subtotal || 0), 0);
     const due = Number(total.toFixed(2)) - Number(form.paid_amount || 0);
