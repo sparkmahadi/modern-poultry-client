@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import {toast } from 'react-toastify';
+import { useNavigate } from 'react-router';
 
 const ExpenseThreads = () => {
   const [threads, setThreads] = useState([]);
@@ -9,6 +9,9 @@ const ExpenseThreads = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
   const [selectedThread, setSelectedThread] = useState(null);
+  const navigate = useNavigate();
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Form State
   const [formData, setFormData] = useState({ name: '', cost: '', description: '' });
@@ -17,13 +20,10 @@ const ExpenseThreads = () => {
   const fetchThreads = async () => {
     try {
       setLoading(true);
-      // Replace with your MERN route: await axios.get('http://localhost:5000/api/threads');
-      const mockData = [
-        { name: 'Electric Bill A', total_cost: 120, details: 'Ground Floor Meter', },
-        {name: 'Shop Rent', total_cost: 5000, details: 'Main Plaza Branch' },
-        {name: 'Maintenance', total_cost: 250, details: 'Monthly AC Servicing' },
-      ];
-      setThreads(mockData);
+      const res = await axios.get(`${API_BASE_URL}/api/expense-threads`)
+      const data = res.data.data;
+      console.log(data);
+      setThreads(data);
     } catch (err) {
       toast.error("Failed to sync with database");
     } finally {
@@ -44,9 +44,14 @@ const ExpenseThreads = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this thread?")) {
       try {
-        // await axios.delete(`/api/threads/${id}`);
-        setThreads(threads.filter(t => t.id !== id));
-        toast.success("Thread deleted successfully");
+        const res = await axios.delete(`${API_BASE_URL}/api/expense-threads/${id}`);
+        const data = (res.data);
+        if(data.success){
+          setThreads(threads.filter(t => t._id !== id));
+          toast.success(data.message);
+        } else{
+          toast.info(data.message);
+        }
       } catch (err) {
         toast.error("Delete operation failed");
       }
@@ -57,11 +62,11 @@ const ExpenseThreads = () => {
     e.preventDefault();
     try {
       if (modalMode === 'add') {
-        // await axios.post('/api/threads', formData);
+        await axios.post(`${API_BASE_URL}/api/expense-threads`, formData);
         console.log(formData);
         toast.success("New thread added!");
     } else if (modalMode === 'edit') {
-        // await axios.put(`/api/threads/${selectedThread.id}`, formData);
+        await axios.put(`${API_BASE_URL}/api/expense-threads/${selectedThread._id}`, formData);
         toast.success("Thread updated!");
         console.log(formData);
       }
@@ -76,7 +81,6 @@ const ExpenseThreads = () => {
 
   return (
     <div className="p-8 max-w-6xl mx-auto bg-white min-h-screen">
-      <ToastContainer position="bottom-right" theme="minimal" />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-10">
@@ -84,6 +88,12 @@ const ExpenseThreads = () => {
           <h1 className="text-3xl font-light text-slate-900 tracking-tight">Expense <span className="font-bold">Threads</span></h1>
           <p className="text-sm text-slate-400 mt-1 italic">Manage Bills, Rents, and Operations</p>
         </div>
+        <button 
+          onClick={() => navigate(`/bills`)}
+          className="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-lg"
+        >
+          Bills
+        </button>
         <button 
           onClick={() => handleOpenModal('add')}
           className="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-lg"
@@ -105,14 +115,14 @@ const ExpenseThreads = () => {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {threads.map((thread, index) => (
-              <tr key={thread.id} className="hover:bg-slate-50/50 transition-colors">
+              <tr key={thread._id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 text-slate-400 font-medium">{index + 1}</td>
                 <td className="px-6 py-4 text-slate-900 font-semibold">{thread.name}</td>
                 <td className="px-6 py-4 text-slate-600 font-mono">${thread.cost}</td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleOpenModal('view', thread)} className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition">Details</button>
                   <button onClick={() => handleOpenModal('edit', thread)} className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition">Edit</button>
-                  <button onClick={() => handleDelete(thread.id)} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition">Delete</button>
+                  <button onClick={() => handleDelete(thread._id)} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition">Delete</button>
                 </td>
               </tr>
             ))}
