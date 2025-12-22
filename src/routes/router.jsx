@@ -31,6 +31,8 @@ import PaymentAccounts from '../pages/PaymentAccounts/PaymentAccounts';
 import CreatePaymentAccount from '../pages/PaymentAccounts/CreatePaymentAccount';
 import PurchaseManager from '../pages/Purchase/PurchaseManager';
 import SalesManager from '../pages/Sales/SalesManager/SalesManager';
+import BillsList from '../pages/Expenses/BillsList';
+import ExpenseThreads from '../pages/Expenses/ExpenseThreads';
 
 const router = createBrowserRouter([
   {
@@ -46,6 +48,10 @@ const router = createBrowserRouter([
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
       { path: '/customers/:id', element: <CustomerDetails /> },
+
+
+      { path: '/expense-threads', element: <ExpenseThreads /> },
+      { path: '/bills', element: <BillsList /> },
 
       
       { path: '/payment_accounts', element: <PaymentAccounts /> },

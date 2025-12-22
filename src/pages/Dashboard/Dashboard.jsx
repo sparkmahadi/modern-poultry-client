@@ -79,6 +79,8 @@ const Dashboard = () => {
         { name: t.payment_accounts, icon: ClipboardList, href: "/payment_accounts", description: "Manage your payment_accounts flow and balance." },
         { name: t.reports, icon: ClipboardList, href: "/reports", description: "Generate business insights and data reports." },
         { name: t.batches, icon: ClipboardList, href: "/farm-batches", description: "Generate business insights and data reports." },
+        { name: 'expenses', icon: ClipboardList, href: "/expense-threads", description: "Generate business insights and data reports." },
+        { name: 'Bills', icon: ClipboardList, href: "/bills", description: "Generate business insights and data reports." },
     ];
 
     const NavItem = ({ item }) => {
