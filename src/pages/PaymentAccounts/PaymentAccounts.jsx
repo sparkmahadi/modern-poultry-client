@@ -13,7 +13,7 @@ import {
 import axios from "axios";
 import { toast } from "react-toastify";
 import CreatePaymentAccount from "./CreatePaymentAccount";
-import EditPaymentAccount from "./EditPaymentAccount"; 
+import EditPaymentAccount from "./EditPaymentAccount";
 
 
 // --- Config ---
@@ -31,34 +31,34 @@ const getAccountIcon = (type) => {
 
 // Reusable Modal Component (defined previously)
 const Modal = ({ isOpen, onClose, children, title }) => {
-    if (!isOpen) return null;
-  
-    return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-11/12 max-w-sm relative">
-          <h3 className="text-xl font-bold mb-4 border-b pb-2">{title}</h3>
-          {children}
-          <button 
-            onClick={onClose} 
-            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-            aria-label="Close modal"
-          >
-            &times;
-          </button>
-        </div>
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-11/12 max-w-sm relative">
+        <h3 className="text-xl font-bold mb-4 border-b pb-2">{title}</h3>
+        {children}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+          aria-label="Close modal"
+        >
+          &times;
+        </button>
       </div>
-    );
+    </div>
+  );
 };
 
 
 const PaymentAccounts = () => {
   const [accounts, setAccounts] = useState([]);
-  const [activeTxAccount, setActiveTxAccount] = useState(null); 
+  const [activeTxAccount, setActiveTxAccount] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   // NEW STATE: For Edit Modal
-  const [accountToEdit, setAccountToEdit] = useState(null); 
+  const [accountToEdit, setAccountToEdit] = useState(null);
 
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txType, setTxType] = useState(null);
@@ -114,17 +114,18 @@ const PaymentAccounts = () => {
       });
 
       console.log(newBalance);
-
-      await axios.post(TRANSACTIONS_URL, {
+      const transactionPayload = {
         account_id: activeTxAccount._id,
         type: txType,
         transaction_type: txType === "add" ? "credit" : "debit",
-        entry_source: "Owner's" + txType === "add" ? "deposit" : "drawing",
+        entry_source: "Owner's " + (txType === "add" ? "deposit" : "drawing"),
         amount,
         remarks:
           txRemarks ||
           (txType === "add" ? "Manual Deposit" : "Manual Withdrawal"),
-      });
+      }
+console.log(transactionPayload);
+      await axios.post(TRANSACTIONS_URL, transactionPayload);
 
       toast.success("Transaction successful");
       setTxModalOpen(false);
@@ -138,25 +139,25 @@ const PaymentAccounts = () => {
       setTxLoading(false);
     }
   };
-  
+
   const openTxModal = (type, account) => {
-      setActiveTxAccount(account);
-      setTxType(type);
-      setTxAmount("");
-      setTxRemarks("");
-      setTxModalOpen(true);
+    setActiveTxAccount(account);
+    setTxType(type);
+    setTxAmount("");
+    setTxRemarks("");
+    setTxModalOpen(true);
   };
-  
+
   // --------------------------------------------------
   // EDIT HANDLERS (New)
   // --------------------------------------------------
   const handleEditClick = (account) => {
-      setAccountToEdit(account);
+    setAccountToEdit(account);
   };
 
   const handleEditSuccess = () => {
-      setAccountToEdit(null); // Close modal
-      fetchAccounts(); // Refresh list to show updates
+    setAccountToEdit(null); // Close modal
+    fetchAccounts(); // Refresh list to show updates
   };
 
 
@@ -177,7 +178,7 @@ const PaymentAccounts = () => {
       toast.error(err.response?.data?.message || err.message);
     }
   };
-  
+
   const handleCreateSuccess = () => {
     setShowCreateModal(false);
     fetchAccounts();
@@ -217,11 +218,11 @@ const PaymentAccounts = () => {
           accounts.map((acc) => {
             const Icon = getAccountIcon(acc.type);
             const accountName = acc.name || acc.bank_name || acc.method;
-            
+
             return (
               // Individual Account Card
-              <div 
-                key={acc._id} 
+              <div
+                key={acc._id}
                 className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition duration-300 flex flex-col"
               >
                 {/* Account Header */}
@@ -235,16 +236,16 @@ const PaymentAccounts = () => {
                       <Star className="w-4 h-4 ml-3 text-yellow-500 fill-yellow-500" title="Default Account" />
                     )}
                   </div>
-                  
+
                   {/* Actions (Edit & Delete) */}
                   <div className="flex space-x-2">
                     {/* NEW EDIT BUTTON */}
                     <button
-                        onClick={() => handleEditClick(acc)}
-                        className="p-1 text-blue-500 hover:text-blue-700 transition duration-150"
-                        title="Edit Account"
+                      onClick={() => handleEditClick(acc)}
+                      className="p-1 text-blue-500 hover:text-blue-700 transition duration-150"
+                      title="Edit Account"
                     >
-                        <Edit className="w-5 h-5" />
+                      <Edit className="w-5 h-5" />
                     </button>
 
                     {/* Delete Button */}
@@ -301,10 +302,10 @@ const PaymentAccounts = () => {
           setTxModalOpen(false);
           setActiveTxAccount(null);
         }}
-        title={txType === "add" ? 
-               `Deposit to ${activeTxAccount?.name || activeTxAccount?.bank_name || 'Account'}` : 
-               `Withdraw from ${activeTxAccount?.name || activeTxAccount?.bank_name || 'Account'}`
-              }
+        title={txType === "add" ?
+          `Deposit to ${activeTxAccount?.name || activeTxAccount?.bank_name || 'Account'}` :
+          `Withdraw from ${activeTxAccount?.name || activeTxAccount?.bank_name || 'Account'}`
+        }
       >
         <form onSubmit={handleTransactionSubmit}>
           {/* ... Transaction form fields ... */}
@@ -361,13 +362,13 @@ const PaymentAccounts = () => {
           onSuccess={handleCreateSuccess}
         />
       )}
-      
+
       {/* NEW EDIT ACCOUNT MODAL */}
       {accountToEdit && (
         <EditPaymentAccount
-            account={accountToEdit}
-            onClose={() => setAccountToEdit(null)}
-            onSuccess={handleEditSuccess}
+          account={accountToEdit}
+          onClose={() => setAccountToEdit(null)}
+          onSuccess={handleEditSuccess}
         />
       )}
     </div>
