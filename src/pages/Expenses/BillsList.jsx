@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import PaymentModal from '../Purchase/PaymentModal';
+import { toast } from 'react-toastify';
+import UniversalPaymentModal from '../../components/UniversalPaymentModal';
+import { useNavigate } from 'react-router';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BillsList = () => {
   const [threads, setThreads] = useState([]);
@@ -11,7 +13,7 @@ const BillsList = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [currentBill, setCurrentBill] = useState(null);
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const navigate = useNavigate();
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [accountList, setAccountList] = useState([]);
@@ -39,6 +41,7 @@ const BillsList = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/api/bills`);
+      console.log(response.data);
       setBills(response.data.data || []);
     } catch (error) {
       toast.error("Failed to load bill data.");
@@ -72,6 +75,7 @@ const BillsList = () => {
         amount: bill.amount || '',
         remarks: bill.remarks || ''
       });
+      // Correctly mapping existing payment details for Edit/View
       setForm({
         payment_method: bill.payment_details?.payment_method || bill.paymentAc || "",
         account_id: bill.payment_details?.account_id || "",
@@ -84,7 +88,6 @@ const BillsList = () => {
     setShowModal(true);
   };
 
-  // --- DELETE HANDLER ---
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to permanently delete this bill record?")) {
       try {
@@ -98,12 +101,31 @@ const BillsList = () => {
   };
 
   const handlePaymentSelect = ({ paymentMethod, accountId }) => {
-    setForm(prev => ({ ...prev, payment_method: paymentMethod, account_id: accountId }));
+    setForm(prev => ({ 
+        ...prev, 
+        payment_method: paymentMethod, 
+        account_id: accountId 
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData, payment_details: form, paymentAc: form.payment_method };
+
+    // --- VALIDATION START ---
+    if (!form.payment_method || !form.account_id) {
+      return toast.warn("Please select a payment method and account before saving.");
+    }
+    if (!formData.expenseThreadId) {
+      return toast.warn("Please select an expense thread.");
+    }
+    // --- VALIDATION END ---
+
+    const payload = { 
+        ...formData, 
+        payment_details: form, 
+        paymentAc: form.payment_method 
+    };
+
     try {
       if (modalMode === 'add') {
         await axios.post(`${API_BASE_URL}/api/bills`, payload);
@@ -114,25 +136,27 @@ const BillsList = () => {
       }
       setShowModal(false);
       fetchBills();
-    } catch (err) { toast.error("Action failed."); }
+    } catch (err) { 
+      toast.error(err.response?.data?.message || "Action failed."); 
+    }
   };
 
   const getSelectedAccountName = () => {
     if (!form.account_id) return "None Selected";
     const acc = accountList.find(a => a._id === form.account_id);
-    return acc ? acc.account_name : "Default Account";
+    // Flexible naming check based on common API structures
+    return acc ? (acc.account_name || acc.bank_name || acc.name) : "Selected Account";
   };
 
   if (loading) return <div className="p-10 text-center text-gray-400">Loading records...</div>;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <ToastContainer position="bottom-right" theme="colored" />
-      
       <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-8 py-6 flex justify-between items-center border-b border-gray-50">
           <h2 className="text-2xl font-semibold text-gray-800 tracking-tight">Financial Ledger</h2>
-          <button onClick={() => openModal('add')} className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded-lg text-sm font-medium transition-all shadow-md">+ Create New Entry</button>
+          <button onClick={() => navigate('/expense-threads')} className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded-lg text-sm font-medium transition-all shadow-md">Expense Threads</button>
+          < button onClick={() => openModal('add')} className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded-lg text-sm font-medium transition-all shadow-md">+ Create New Entry</button>
         </div>
 
         <div className="overflow-x-auto">
@@ -152,9 +176,9 @@ const BillsList = () => {
                 <tr key={bill._id || index} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-slate-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 text-slate-900 font-semibold">{bill.billName}</td>
-                  <td className="px-6 py-4 text-slate-500 text-sm">{bill.expenseThreadId?.name || "N/A"}</td>
+                  <td className="px-6 py-4 text-slate-500 text-sm">{bill.expenseThreadName || "N/A"}</td>
                   <td className="px-6 py-4 text-blue-600 font-bold">${bill.amount}</td>
-                  <td className="px-6 py-4 text-slate-600 text-sm">{bill.payment_details?.payment_method || bill.paymentAc}</td>
+                  <td className="px-6 py-4 text-slate-600 text-sm capitalize">{bill.payment_details?.payment_method || bill.paymentAc || "N/A"}</td>
                   <td className="px-6 py-4 text-center space-x-2">
                     <button onClick={() => openModal('view', bill)} className="px-2 py-1 text-xs bg-slate-100 rounded text-slate-600 hover:bg-slate-200">View</button>
                     <button onClick={() => openModal('edit', bill)} className="px-2 py-1 text-xs bg-blue-50 rounded text-blue-600 hover:bg-blue-100">Edit</button>
@@ -167,11 +191,11 @@ const BillsList = () => {
         </div>
       </div>
 
-      {/* --- Merged Modal --- */}
+      {/* --- Bill Entry/Edit Modal --- */}
       {showModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">{modalMode.toUpperCase()} RECORD</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6 capitalize">{modalMode} Record</h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -193,15 +217,25 @@ const BillsList = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <label className="text-xs font-bold text-slate-400 uppercase">Payment Details</label>
+              {/* PAYMENT SECTION WITH HIGHLIGHTED VALIDATION */}
+              <div className={`p-4 rounded-xl border transition-all ${!form.account_id && modalMode !== 'view' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase">Payment Details</label>
+                    {!form.account_id && modalMode !== 'view' && <span className="text-[10px] text-amber-600 font-bold uppercase">Required</span>}
+                </div>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-700">{form.payment_method || "Pending Selection"}</span>
-                    <span className="text-xs text-blue-600">{getSelectedAccountName()}</span>
+                    <span className={`text-sm font-semibold capitalize ${!form.payment_method ? 'text-slate-400 italic' : 'text-slate-700'}`}>
+                        {form.payment_method || "No method selected"}
+                    </span>
+                    <span className={`text-xs ${!form.account_id ? 'text-amber-500' : 'text-blue-600 font-medium'}`}>
+                        {getSelectedAccountName()}
+                    </span>
                   </div>
                   {modalMode !== 'view' && (
-                    <button type="button" onClick={() => setShowPaymentModal(true)} className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg">Change</button>
+                    <button type="button" onClick={() => setShowPaymentModal(true)} className="text-xs bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg transition-colors">
+                      {form.account_id ? "Change Account" : "Select Account"}
+                    </button>
                   )}
                 </div>
               </div>
@@ -214,7 +248,9 @@ const BillsList = () => {
               <div className="pt-6 flex justify-end gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 text-slate-400 hover:text-slate-600">Cancel</button>
                 {modalMode !== 'view' && (
-                  <button type="submit" className="bg-blue-600 text-white px-8 py-2 rounded-xl font-semibold shadow-lg">Save Changes</button>
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-xl font-semibold shadow-lg transition-all">
+                    {modalMode === 'add' ? 'Create Entry' : 'Update Bill'}
+                  </button>
                 )}
               </div>
             </form>
@@ -222,11 +258,13 @@ const BillsList = () => {
         </div>
       )}
 
-      <PaymentModal 
+      {/* --- Universal Modal Integration --- */}
+      <UniversalPaymentModal 
         isOpen={showPaymentModal} 
         onClose={() => setShowPaymentModal(false)} 
         onSelectPayment={handlePaymentSelect} 
         defaultPaymentMethod={form.payment_method} 
+        defaultSelectedAccount={form.account_id} // Pass current ID to highlight in edit mode
       />
     </div>
   );

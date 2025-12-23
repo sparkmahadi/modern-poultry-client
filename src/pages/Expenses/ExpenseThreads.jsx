@@ -14,7 +14,7 @@ const ExpenseThreads = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Form State
-  const [formData, setFormData] = useState({ name: '', cost: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', total_cost: '', description: '' });
 
   // 1. Fetch all threads (Mocking data from Image 2 categories)
   const fetchThreads = async () => {
@@ -37,7 +37,7 @@ const ExpenseThreads = () => {
   const handleOpenModal = (mode, thread = null) => {
     setModalMode(mode);
     setSelectedThread(thread);
-    setFormData(thread ? { name: thread.name, cost: thread.cost, description: thread.description } : { name: '', cost: '', description: '' });
+    setFormData(thread ? { name: thread.name, total_cost: thread.total_cost, description: thread.description } : { name: '', total_cost: '', description: '' });
     setIsModalOpen(true);
   };
 
@@ -118,7 +118,7 @@ const ExpenseThreads = () => {
               <tr key={thread._id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 text-slate-400 font-medium">{index + 1}</td>
                 <td className="px-6 py-4 text-slate-900 font-semibold">{thread.name}</td>
-                <td className="px-6 py-4 text-slate-600 font-mono">${thread.cost}</td>
+                <td className="px-6 py-4 text-slate-600 font-mono">${thread.total_cost}</td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleOpenModal('view', thread)} className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition">Details</button>
                   <button onClick={() => handleOpenModal('edit', thread)} className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition">Edit</button>
@@ -152,8 +152,8 @@ const ExpenseThreads = () => {
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cost ($)</label>
                 <input 
                   type="number" required disabled={modalMode === 'view'}
-                  value={formData.cost}
-                  onChange={(e) => setFormData({...formData, cost: e.target.value})}
+                  value={formData.total_cost}
+                  onChange={(e) => setFormData({...formData, total_cost: e.target.value})}
                   className="w-full mt-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none disabled:bg-slate-50"
                 />
               </div>
