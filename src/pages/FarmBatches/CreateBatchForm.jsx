@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import UniversalSelector from "../../components/UniversalSelector";
@@ -17,7 +17,7 @@ const initialFormData = {
     notes: "",
 };
 
-const CreateBatchForm = ({ batchData = null, onSuccess }) => {
+const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
     const isEditing = !!batchData?._id;
 
     const [formData, setFormData] = useState(
@@ -26,8 +26,7 @@ const CreateBatchForm = ({ batchData = null, onSuccess }) => {
                 ...initialFormData,
                 ...batchData,
                 startDate: batchData.startDate?.split("T")[0],
-                expectedEndDate:
-                    batchData.expectedEndDate?.split("T")[0] || "",
+                expectedEndDate: batchData.expectedEndDate?.split("T")[0] || "",
             }
             : initialFormData
     );
@@ -40,17 +39,14 @@ const CreateBatchForm = ({ batchData = null, onSuccess }) => {
 
     const [loading, setLoading] = useState(false);
 
-    // FORM HANDLER
     const handleChange = (e) => {
         const { name, value, type } = e.target;
         const finalValue = type === "number" ? Number(value) : value;
         setFormData((prev) => ({ ...prev, [name]: finalValue }));
     };
 
-    // HANDLE SAVE
     const handleSaveBatch = async (e) => {
         e.preventDefault();
-
         if (!selectedFarmer) {
             toast.error("Please select a farmer.");
             return;
@@ -66,144 +62,77 @@ const CreateBatchForm = ({ batchData = null, onSuccess }) => {
         try {
             setLoading(true);
             const res = isEditing
-                ? await axios.put(
-                    `${API_BASE_URL}/api/batches/${batchData._id}`,
-                    payload
-                )
+                ? await axios.put(`${API_BASE_URL}/api/batches/${batchData._id}`, payload)
                 : await axios.post(`${API_BASE_URL}/api/batches`, payload);
 
             toast.success(isEditing ? "Batch updated" : "Batch created");
-
             onSuccess && onSuccess(res.data.data);
         } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.message || "Error");
+            toast.error(err.response?.data?.message || "Error saving batch");
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
-        <div className="p-6 bg-white rounded-xl shadow-lg">
-            <h2 className="text-xl font-bold mb-4">
-                {isEditing ? "Edit Batch" : "Create New Batch"}
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center p-6 border-b">
+                    <h2 className="text-xl font-bold text-gray-800">
+                        {isEditing ? "Edit Batch" : "Create New Batch"}
+                    </h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
 
-            <form onSubmit={handleSaveBatch} className="space-y-6">
+                <form onSubmit={handleSaveBatch} className="p-6 space-y-4">
+                    <UniversalSelector
+                        label="Select Farmer"
+                        placeholder="Search farmer by name..."
+                        apiUrl={`${API_BASE_URL}/api/customers`}
+                        selectedItem={selectedFarmer}
+                        onSelect={(item) => {
+                            setSelectedFarmer(item);
+                            setFormData((p) => ({ ...p, farmer: item.name, farmerId: item._id }));
+                        }}
+                        displayKey="name"
+                    />
 
-                {/* 🔍 UNIVERSAL SEARCH SELECTOR FOR FARMERS */}
-                <UniversalSelector
-                    label="Select Farmer"
-                    placeholder="Search farmer by name..."
-                    apiUrl={`${API_BASE_URL}/api/customers`}
-                    selectedItem={selectedFarmer}
-                    onSelect={(item) => {
-                        setSelectedFarmer(item);
-                        setFormData((p) => ({
-                            ...p,
-                            farmer: item.name,
-                            farmerId: item._id,
-                        }));
-                    }}
-                    displayKey="name"
-                />
-
-                {selectedFarmer && (
-                    <div className="p-4 rounded-lg bg-gray-50 border shadow-sm">
-                        <h3 className="text-md font-semibold mb-2">Customer Details</h3>
-
-                        <div className="space-y-1 text-sm">
-                            <p><strong>Name:</strong> {selectedFarmer.name}</p>
-                            {selectedFarmer.phone && (
-                                <p><strong>Phone:</strong> {selectedFarmer.phone}</p>
-                            )}
-                            {selectedFarmer.address && (
-                                <p><strong>Address:</strong> {selectedFarmer.address}</p>
-                            )}
-                            {selectedFarmer.customerType && (
-                                <p><strong>Type:</strong> {selectedFarmer.customerType}</p>
-                            )}
-                            {selectedFarmer.totalDue !== undefined && (
-                                <p className="text-red-600 font-semibold">
-                                    <strong>Total Due:</strong> {selectedFarmer.totalDue} ৳
-                                </p>
-                            )}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Chicks Quantity</label>
+                            <input type="number" name="chicksQuantity" value={formData.chicksQuantity} onChange={handleChange} min={1} className="w-full border rounded-md p-2" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Chicks Breed</label>
+                            <select name="chicksBreed" value={formData.chicksBreed} onChange={handleChange} className="w-full border rounded-md p-2">
+                                <option value="Broiler">Broiler</option>
+                                <option value="Layer">Layer</option>
+                                <option value="Breeder">Breeder</option>
+                            </select>
                         </div>
                     </div>
-                )}
 
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Start Date</label>
+                            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full border rounded-md p-2" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Expected End Date</label>
+                            <input type="date" name="expectedEndDate" value={formData.expectedEndDate} onChange={handleChange} className="w-full border rounded-md p-2" />
+                        </div>
+                    </div>
 
-                {/*  Chicks Quantity */}
-                <div>
-                    <label className="text-sm font-medium">Chicks Quantity</label>
-                    <input
-                        type="number"
-                        name="chicksQuantity"
-                        value={formData.chicksQuantity}
-                        onChange={handleChange}
-                        min={1}
-                        className="w-full border rounded-md p-2"
-                    />
-                </div>
+                    <textarea name="notes" rows="3" value={formData.notes} onChange={handleChange} className="w-full border rounded-md p-2" placeholder="Notes..." />
 
-                {/* Breed */}
-                <div>
-                    <label className="text-sm font-medium">Chicks Breed</label>
-                    <select
-                        name="chicksBreed"
-                        value={formData.chicksBreed}
-                        onChange={handleChange}
-                        className="w-full border rounded-md p-2"
-                    >
-                        <option value="Broiler">Broiler</option>
-                        <option value="Layer">Layer</option>
-                        <option value="Breeder">Breeder</option>
-                    </select>
-                </div>
-
-                {/* Dates */}
-                <div>
-                    <label className="text-sm font-medium">Start Date</label>
-                    <input
-                        type="date"
-                        name="startDate"
-                        value={formData.startDate}
-                        onChange={handleChange}
-                        className="w-full border rounded-md p-2"
-                    />
-                </div>
-
-                <div>
-                    <label className="text-sm font-medium">
-                        Expected End Date
-                    </label>
-                    <input
-                        type="date"
-                        name="expectedEndDate"
-                        value={formData.expectedEndDate}
-                        onChange={handleChange}
-                        className="w-full border rounded-md p-2"
-                    />
-                </div>
-
-                {/* Notes */}
-                <textarea
-                    name="notes"
-                    rows="3"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    className="w-full border rounded-md p-2"
-                    placeholder="Notes..."
-                />
-
-                {/* Submit */}
-                <button
-                    type="submit"
-                    className="w-full bg-indigo-600 text-white py-2 rounded-lg"
-                    disabled={loading}
-                >
-                    {loading ? "Saving..." : isEditing ? "Update" : "Save Batch"}
-                </button>
-            </form>
+                    <div className="flex space-x-3 pt-4">
+                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
+                            {loading ? "Saving..." : isEditing ? "Update" : "Save Batch"}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };
