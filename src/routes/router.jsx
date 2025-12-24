@@ -33,6 +33,7 @@ import PurchaseManager from '../pages/Purchase/PurchaseManager';
 import SalesManager from '../pages/Sales/SalesManager/SalesManager';
 import BillsList from '../pages/Expenses/BillsList';
 import ExpenseThreads from '../pages/Expenses/ExpenseThreads';
+import CustomerDueManagement from '../pages/Customers/CustomerDueManagement';
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
       { path: '/customers/:id', element: <CustomerDetails /> },
+      { path: '/customers/:id/pay-due', element: <CustomerDueManagement /> },
 
 
       { path: '/expense-threads', element: <ExpenseThreads /> },

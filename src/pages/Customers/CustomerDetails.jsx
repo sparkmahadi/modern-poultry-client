@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import CreateBatchForm from '../FarmBatches/CreateBatchForm';
 // Assuming you have access to icons (e.g., from heroicons)
 // For this example, I'll use simple SVG definitions or unicode icons.
 
@@ -147,15 +148,10 @@ const EditCustomerModal = ({
 const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
     const [loadingDelete, setLoadingDelete] = useState(false);
     
-    const handleEndBatch = (batchId) => {
-        alert(`Starting End Batch Flow for Batch ID: ${batchId}`);
-    };
-
-    const statusColors = {
-        'Active': 'bg-blue-100 text-blue-800',
-        'Completed': 'bg-green-100 text-green-800',
-        'High Mortality': 'bg-red-100 text-red-800',
-    };
+  const handleFormSuccess = () => { setIsModalOpen(false) };
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingBatch, setEditingBatch] = useState(null);
+  const handleOpenEdit = (batch) => { setEditingBatch(batch); setIsModalOpen(true); };
 
     const deleteBatch = async (batchId) => {
         setLoadingDelete(true);
@@ -191,59 +187,52 @@ const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
     }
 
     return (
-        <div className="bg-white shadow-xl rounded-xl p-6 mb-8">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-extrabold text-gray-800 flex items-center">
-                    <span className="mr-3 text-indigo-500">🐔</span> Farming Batches
-                </h2>
-                <Link to='/create-batch' 
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 text-sm"
-                >
-                    ➕ Add New Batch
-                </Link>
-            </div>
+        <div className="p-6 bg-gray-50">
+      {isModalOpen && (
+        <CreateBatchForm
+          batchData={editingBatch}
+          onSuccess={handleFormSuccess}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
+      <hr className="my-8" />
 
-            {loadingDelete && <p className="text-yellow-600 mb-4 font-medium">Processing deletion...</p>}
-            
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            {['Batch ID', 'Start Date', 'Feed Used (kg)', 'Mortality (%)', 'Expected End Date', 'Status', 'Actions'].map((header) => (
-                                <th key={header} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                    {header}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
-                        {batches.map((batch) => (
-                            <tr key={batch._id} className="hover:bg-indigo-50/20 transition duration-150">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-700">{batch._id.substring(0, 8)}...</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(batch.startDate)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">{batch.feedAssigned}</td>
-                                <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${batch.mortality > 10 ? 'text-red-600' : batch.mortality > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
-                                    {batch.mortality}%
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(batch.expectedEndDate)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[batch.status]}`}>
-                                        {batch.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                    <Link to={`/farm-batches/${batch._id}`} className="text-indigo-600 hover:text-indigo-900 font-medium">Details</Link>
-                                    {batch.status !== 'Completed' && (
-                                        <button onClick={() => handleEndBatch(batch._id)} className="text-red-600 hover:text-red-900 font-medium">End</button>
-                                    )}
-                                    <button onClick={() => handleDeleteBatch(batch._id)} disabled={loadingDelete} className="text-yellow-600 hover:text-yellow-900 disabled:opacity-50 font-medium">Delete</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+      <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {['Batch ID', 'Farmer', 'Start Date', 'Status', "Chicks", 'Expected End Date', "Breed", 'Actions'].map((header) => (
+                  <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{header}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {batches.map((batch) => (
+                <tr key={batch._id}>
+                  <td className="px-6 py-4 text-sm text-gray-900">{batch._id.slice(-6)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{batch.farmer}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{new Date(batch.startDate).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${batch.active ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                      {batch.active ? 'Active' : 'Completed'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksQuantity}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{batch.expectedEndDate || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksBreed}</td>
+                  <td className="px-6 py-4 text-sm font-medium space-x-3">
+                    <button onClick={() => handleOpenEdit(batch)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
+                    <Link to={`/farm-batches/${batch._id}`} className="text-indigo-600 hover:text-indigo-900">Details</Link>
+                    <button onClick={() => handleDeleteBatch(batch._id)} className="text-red-600 hover:text-red-900">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      </div>
+    </div>
     );
 };
 
@@ -509,6 +498,13 @@ const CustomerDetails = () => {
                             disabled={isLoading}
                         >
                             ✏️ Edit
+                        </button>
+                        <button
+                            onClick={()=> navigate("pay-due")}
+                            className="bg-yellow-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
+                            disabled={isLoading}
+                        >
+                            Receive Due Payment
                         </button>
                         <button
                             onClick={handleDelete}
