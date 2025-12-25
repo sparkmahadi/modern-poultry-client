@@ -114,10 +114,6 @@ const Home = () => {
         </form>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-green-700 text-gray-100 text-center py-6">
-        <p>&copy; {new Date().getFullYear()} PoultryCare. All rights reserved.</p>
-      </footer>
     </div>
   );
 };

@@ -15,6 +15,7 @@ const initialFormData = {
     startDate: new Date().toISOString().split("T")[0],
     expectedEndDate: "",
     notes: "",
+    active: true
 };
 
 const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
@@ -39,9 +40,17 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
 
     const [loading, setLoading] = useState(false);
 
+    // UPDATED: Handle change now checks for checkboxes
     const handleChange = (e) => {
-        const { name, value, type } = e.target;
-        const finalValue = type === "number" ? Number(value) : value;
+        const { name, value, type, checked } = e.target;
+
+        // Use 'checked' for checkboxes, 'number' for numbers, otherwise 'value'
+        const finalValue = type === "checkbox"
+            ? checked
+            : type === "number"
+                ? Number(value)
+                : value;
+
         setFormData((prev) => ({ ...prev, [name]: finalValue }));
     };
 
@@ -56,10 +65,10 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
             ...formData,
             farmer: selectedFarmer.name,
             farmerId: selectedFarmer._id,
-            active: true,
         };
 
         try {
+            console.log(payload);
             setLoading(true);
             const res = isEditing
                 ? await axios.put(`${API_BASE_URL}/api/batches/${batchData._id}`, payload)
@@ -120,6 +129,19 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
                         <div>
                             <label className="block text-sm font-medium mb-1">Expected End Date</label>
                             <input type="date" name="expectedEndDate" value={formData.expectedEndDate} onChange={handleChange} className="w-full border rounded-md p-2" />
+                        </div>
+                        <div className="flex items-center space-x-2 py-2">
+                            <input
+                                type="checkbox"
+                                id="activeStatus"
+                                name="active"
+                                checked={formData.active}
+                                onChange={handleChange}
+                                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                            />
+                            <label htmlFor="activeStatus" className="text-sm font-medium text-gray-700">
+                                Batch is currently active
+                            </label>
                         </div>
                     </div>
 

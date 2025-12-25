@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import CreateBatchForm from '../FarmBatches/CreateBatchForm';
-import CustomerSalesManager from './CustomerSalesManager';
 import UniversalSalesManager from '../Sales/UniversalSalesManager';
+import ReceiveDueManuallyModal from './ReceiveDueManuallyModal';
 // Assuming you have access to icons (e.g., from heroicons)
 // For this example, I'll use simple SVG definitions or unicode icons.
 
@@ -108,8 +108,8 @@ const EditCustomerModal = ({
                         <InputField label="Address" name="address" value={form.address} onChange={handleChange} />
 
                         <div className="grid grid-cols-2 gap-5 border-t pt-5">
-                            <InputField label="Current Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} min="0" />
-                            <InputField label="Current Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} min="0" />
+                            <InputField label="Current Manual Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} min="0" />
+                            <InputField label="Current Manual Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} min="0" />
                         </div>
 
                         <SelectField
@@ -245,6 +245,7 @@ const CustomerDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const CUSTOMER_API_URL = `${API_BASE_URL}/api/customers`;
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const [customer, setCustomer] = useState(null);
     const [customerBatches, setCustomerBatches] = useState(null);
@@ -259,6 +260,7 @@ const CustomerDetails = () => {
         try {
             const res = await axios.get(`${CUSTOMER_API_URL}/${id}`);
             const customerData = res.data.data;
+            console.log(customerData);
             setCustomer(customerData);
             setForm(customerData);
         } catch (err) {
@@ -389,18 +391,17 @@ const CustomerDetails = () => {
                     {/* Action Buttons */}
                     <div className="flex space-x-3">
                         <button
+                            onClick={() => setIsPaymentModalOpen(true)}
+                            className="bg-green-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-green-700 transition flex items-center gap-2 shadow-md"
+                        >
+                            <span className="text-lg">💰</span> Receive Payment Manually
+                        </button>
+                        <button
                             onClick={openEditModal}
                             className="bg-yellow-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
                             disabled={isLoading}
                         >
                             ✏️ Edit
-                        </button>
-                        <button
-                            onClick={() => navigate("pay-due")}
-                            className="bg-yellow-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
-                            disabled={isLoading}
-                        >
-                            Receive Due Payment
                         </button>
                         <button
                             onClick={handleDelete}
@@ -409,26 +410,6 @@ const CustomerDetails = () => {
                         >
                             🗑️ Delete
                         </button>
-                    </div>
-                </div>
-
-                {/* Financial/Status Overview Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-red-500">
-                        <p className="text-sm font-medium text-gray-500">Current Due</p>
-                        <p className="text-2xl font-extrabold text-red-600 mt-1">{formatCurrency(customer.due)}</p>
-                    </div>
-                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-green-500">
-                        <p className="text-sm font-medium text-gray-500">Current Advance</p>
-                        <p className="text-2xl font-extrabold text-green-600 mt-1">{formatCurrency(customer.advance)}</p>
-                    </div>
-                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-indigo-500">
-                        <p className="text-sm font-medium text-gray-500">Total Lifetime Sales</p>
-                        <p className="text-2xl font-extrabold text-indigo-600 mt-1">{formatCurrency(customer.total_sales || 0)}</p>
-                    </div>
-                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-gray-500">
-                        <p className="text-sm font-medium text-gray-500">Customer Status</p>
-                        <div className="mt-2">{getStatusBadge(customer.status)}</div>
                     </div>
                 </div>
 
@@ -441,28 +422,55 @@ const CustomerDetails = () => {
                         <DetailItem label="Phone" value={customer.phone || 'N/A'} color="text-gray-700" />
                         <DetailItem label="Type" value={customer.type} badge={true} />
                         <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} color="text-gray-700" />
-                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} color="text-gray-700" />
+                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_Sale_date)} color="text-gray-700" />
                         <DetailItem label="ID" value={customer._id} color="text-gray-700" />
+                        <DetailItem label="Address" value={customer?.address || 'N/A'} color="text-gray-700" />
                     </div>
 
-                    {/* Address Detail - Spanning full width */}
-                    <div className="pt-4 border-t">
-                        <h3 className="text-sm font-bold text-gray-700 mb-1">Address</h3>
-                        <p className="text-md text-gray-600 p-3 bg-gray-50 rounded-lg border">{customer.address || 'N/A'}</p>
+                </div>
+
+
+                {/* Financial/Status Overview Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p className="text-sm font-medium text-gray-500">Current Total Due</p>
+                        <p className="text-2xl font-extrabold text-red-600 mt-1">{formatCurrency(customer.manual_due + customer.due)}</p>
                     </div>
 
-                    <div className="pt-4 border-t">
-                        <h3 className="text-sm font-bold text-gray-700 mb-2">Purchased Products Summary</h3>
-                        <div className="text-gray-700 p-3 bg-gray-50 rounded-lg border">
-                            {customer.purchased_products && customer.purchased_products.length > 0 ? (
-                                <ul className="list-disc list-inside space-y-1 text-sm grid sm:grid-cols-2">
-                                    {customer.purchased_products.map((p, index) => <li key={index} className="text-gray-600">{p}</li>)}
-                                </ul>
-                            ) : (
-                                <p className="text-gray-500 text-sm italic">No product history available.</p>
-                            )}
-                        </div>
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p className="text-sm font-medium text-gray-500">Current Total Advance</p>
+                        <p className="text-2xl font-extrabold text-green-600 mt-1">{formatCurrency(customer.manual_advance + customer.advance)}</p>
                     </div>
+
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-indigo-500">
+                        <p className="text-sm font-medium text-gray-500">Total Lifetime Sales</p>
+                        <p className="text-2xl font-extrabold text-indigo-600 mt-1">{formatCurrency(customer.total_sales || 0)}</p>
+                    </div>
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-gray-500">
+                        <p className="text-sm font-medium text-gray-500">Customer Status</p>
+                        <div className="mt-2">{getStatusBadge(customer.status)}</div>
+                    </div>
+
+
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p className="text-sm font-medium text-gray-500">Current System Due</p>
+                        <p className="text-2xl font-extrabold text-red-600 mt-1">{formatCurrency(customer.due)}</p>
+                    </div>
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p className="text-sm font-medium text-gray-500">Current Manual Due</p>
+                        <p className="text-2xl font-extrabold text-red-600 mt-1">{formatCurrency(customer.manual_due)}</p>
+                    </div>
+
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p className="text-sm font-medium text-gray-500">Current System Advance</p>
+                        <p className="text-2xl font-extrabold text-green-600 mt-1">{formatCurrency(customer.advance)}</p>
+                    </div>
+                    <div className="p-5 bg-white rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p className="text-sm font-medium text-gray-500">Current Manual Advance</p>
+                        <p className="text-2xl font-extrabold text-green-600 mt-1">{formatCurrency(customer.manual_advance)}</p>
+                    </div>
+
+
                 </div>
 
                 {/* Batches and Sales Sections */}
@@ -480,6 +488,21 @@ const CustomerDetails = () => {
                         fetchUrl={`${API_BASE_URL}/api/sales/customer-sales/${customer._id}`}
                     />
                 </div>
+
+
+
+                <div className="pt-4 border-t">
+                    <h3 className="text-sm font-bold text-gray-700 mb-2">Purchased Products Summary</h3>
+                    <div className="text-gray-700 p-3 bg-gray-50 rounded-lg border">
+                        {customer.purchased_products && customer.purchased_products.length > 0 ? (
+                            <ul className="list-disc list-inside space-y-1 text-sm grid sm:grid-cols-2">
+                                {customer.purchased_products.map((p, index) => <li key={index} className="text-gray-600">{p}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-gray-500 text-sm italic">No product history available.</p>
+                        )}
+                    </div>
+                </div>
             </div>
 
 
@@ -492,6 +515,18 @@ const CustomerDetails = () => {
                 error={error}
                 handleChange={handleChange}
                 handleSubmit={handleEditSubmit}
+            />
+
+            <ReceiveDueManuallyModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                customerId={customer._id}
+                customerName={customer.name}
+                onPaymentSuccess={() => {
+                    fetchCustomerDetails(); // Refresh balance/due cards
+                    // Trigger a refresh of the sales history
+                    window.location.reload();
+                }}
             />
         </div>
     );

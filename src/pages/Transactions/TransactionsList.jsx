@@ -182,9 +182,9 @@ const TransactionsList = () => {
 
   // --- Main Render ---
   return (
-    <div className="max-w-5xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-2xl font-sans">
+    <div className="mx-20 mt-10 p-6 bg-white rounded-xl shadow-2xl font-sans">
       <h2 className="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
-        Cash Transactions History
+        Transactions History
       </h2>
 
       {/* Error Alert */}

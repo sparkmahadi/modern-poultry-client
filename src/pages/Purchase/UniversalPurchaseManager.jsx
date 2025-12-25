@@ -97,11 +97,15 @@ const UniversalPurchaseManager = ({
                 payAmount: pay,
                 paymentAccountId: selectedAccountId
             });
+
+            console.log(response);
             setPurchases(prev => prev.map(p => p._id === selectedPurchase._id ? response.data.data : p));
             toast.success("Payment recorded");
             setShowPaymentModal(false);
         } catch (err) {
+            console.log(err);
             toast.error("Payment failed");
+            toast.error(err.response.data.message);
         }
     };
 

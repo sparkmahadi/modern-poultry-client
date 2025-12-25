@@ -329,6 +329,8 @@ const PurchaseForm = () => {
         account_id: form.account_id,
         paid_amount: Number(form.paid_amount) || 0,
 
+        date: new Date(date),
+
         total_amount: totalPurchase,
 
         products: products.map(p => ({
@@ -341,7 +343,6 @@ const PurchaseForm = () => {
       };
 
       console.log('payload', payload);
-
 
       const res = await axios.post(`${API_BASE_URL}/api/purchases`, payload);
       const data = (res.data);
@@ -359,13 +360,25 @@ const PurchaseForm = () => {
     }
   };
 
+
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
   // --- Render ---
   return (
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
       <h1 className="text-4xl font-extrabold text-gray-800 mb-8 border-b pb-2">🛍️ New Purchase Entry</h1>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-5xl mx-auto gap-8">
+
+          {/* <div className="font-medium">{date}</div> */}
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="p-1 border-b text-right focus:outline-none"
+          />
+
 
           {/* === Left Column: Supplier Info and Financial Status === */}
           <div className="lg:col-span-1 space-y-6">

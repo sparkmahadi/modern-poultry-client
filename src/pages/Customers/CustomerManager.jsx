@@ -200,7 +200,7 @@ const CustomerManager = () => {
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-indigo-600 rounded-xl"><User className="w-6 h-6 text-white" /></div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Accounts Ledger</h1>
+                            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Sales Ledger</h1>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Financial Aggregation</p>
                         </div>
                     </div>

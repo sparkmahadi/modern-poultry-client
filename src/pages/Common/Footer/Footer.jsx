@@ -3,8 +3,6 @@ import { Copyright } from 'lucide-react'; // Using Lucide icon for copyright
 
 // Footer Component
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <footer className="bg-gray-800 text-white py-8 px-4 font-inter">
       <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left space-y-4 md:space-y-0">
@@ -12,7 +10,8 @@ const Footer = () => {
         <div className="flex items-center space-x-2">
           <Copyright size={18} className="text-gray-400" />
           <p className="text-sm md:text-base text-gray-300">
-            {currentYear} Family Budget. All rights reserved.
+
+            <p>&copy; {new Date().getFullYear()} PoultryCare. All rights reserved.</p>
           </p>
         </div>
 
