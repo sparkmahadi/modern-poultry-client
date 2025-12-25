@@ -16,24 +16,22 @@ import Dashboard from './../pages/Dashboard/Dashboard';
 import SupplierDetails from './../pages/Suppliers/SupplierDetails';
 import InventoryViewer from '../pages/Inventory/InventoryViewer';
 import TransactionsList from '../pages/Transactions/TransactionsList';
-import PurchaseList from '../pages/Purchase/Deprecated/PurchaseList';
 import PurchaseEdit from '../pages/Purchase/PurchaseEdit';
 import CustomerDetails from '../pages/Customers/CustomerDetails';
-import DailySales from '../pages/Sales/DailySales';
-import DailyCashSales from '../pages/Sales/DailyCashSales';
-import DailyDueSales from '../pages/Sales/DailyDueSales';
+import DailySales from '../pages/Sales/SalesReports/DailySales';
 import BatchList from '../pages/FarmBatches/BatchList';
 import CreateBatchForm from '../pages/FarmBatches/CreateBatchForm';
 import BatchDetails from '../pages/FarmBatches/BatchDetails/BatchDetails';
 import SaleDetails from '../pages/Sales/SaleDetails';
-import PurchaseDueList from '../pages/Purchase/Deprecated/PurchaseDueList/PurchaseDueList';
 import PaymentAccounts from '../pages/PaymentAccounts/PaymentAccounts';
 import CreatePaymentAccount from '../pages/PaymentAccounts/CreatePaymentAccount';
 import PurchaseManager from '../pages/Purchase/PurchaseManager';
 import SalesManager from '../pages/Sales/SalesManager/SalesManager';
 import BillsList from '../pages/Expenses/BillsList';
 import ExpenseThreads from '../pages/Expenses/ExpenseThreads';
-import CustomerDueManagement from '../pages/Customers/CustomerDueManagement';
+import SalesReports from '../pages/Sales/SalesReports/SalesReports';
+import PurchaseReports from '../pages/Purchase/PurchaseReports/PurchaseReports';
+import DailyPurchases from '../pages/Purchase/PurchaseReports/DailyPurchases';
 
 const router = createBrowserRouter([
   {
@@ -49,13 +47,12 @@ const router = createBrowserRouter([
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
       { path: '/customers/:id', element: <CustomerDetails /> },
-      { path: '/customers/:id/pay-due', element: <CustomerDueManagement /> },
 
 
       { path: '/expense-threads', element: <ExpenseThreads /> },
       { path: '/bills', element: <BillsList /> },
 
-      
+
       { path: '/payment_accounts', element: <PaymentAccounts /> },
       { path: '/payment_accounts/create', element: <CreatePaymentAccount /> },
 
@@ -69,14 +66,14 @@ const router = createBrowserRouter([
       { path: '/sales', element: <SalesManager /> },
       { path: '/sales/:saleId', element: <SaleDetails /> },
       { path: '/sales/daily-sales', element: <DailySales /> },
-      { path: '/sales/daily-cash-sales', element: <DailyCashSales /> },
-      { path: '/sales/daily-due-sales', element: <DailyDueSales /> },
+      { path: '/sales/sales-reports', element: <SalesReports /> },
 
       { path: '/sales/create-sale', element: <CreateSell /> },
       { path: '/purchases', element: <PurchaseManager /> },
+      { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
       { path: '/purchases/create', element: <PurchaseForm /> },
       { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
-      { path: '/purchases/due-list', element: <PurchaseDueList /> },
+      { path: '/purchases/purchase-reports', element: <PurchaseReports /> },
 
       { path: '/farm-batches', element: <BatchList /> },
       { path: '/farm-batches/:batchId', element: <BatchDetails /> },

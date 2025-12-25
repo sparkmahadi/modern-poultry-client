@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import CreateBatchForm from '../FarmBatches/CreateBatchForm';
+import CustomerSalesManager from './CustomerSalesManager';
+import UniversalSalesManager from '../Sales/UniversalSalesManager';
 // Assuming you have access to icons (e.g., from heroicons)
 // For this example, I'll use simple SVG definitions or unicode icons.
 
@@ -104,7 +106,7 @@ const EditCustomerModal = ({
                             />
                         </div>
                         <InputField label="Address" name="address" value={form.address} onChange={handleChange} />
-                        
+
                         <div className="grid grid-cols-2 gap-5 border-t pt-5">
                             <InputField label="Current Due (৳)" name="due" type="number" value={form.due} onChange={handleChange} min="0" />
                             <InputField label="Current Advance (৳)" name="advance" type="number" value={form.advance} onChange={handleChange} min="0" />
@@ -117,7 +119,7 @@ const EditCustomerModal = ({
                             onChange={handleChange}
                             options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]}
                         />
-                        
+
                         <div className="flex gap-4 pt-5">
                             <button
                                 type="submit"
@@ -147,18 +149,18 @@ const EditCustomerModal = ({
 
 const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
     const [loadingDelete, setLoadingDelete] = useState(false);
-    
-  const handleFormSuccess = () => { setIsModalOpen(false) };
-      const [isModalOpen, setIsModalOpen] = useState(false);
-      const [editingBatch, setEditingBatch] = useState(null);
-  const handleOpenEdit = (batch) => { setEditingBatch(batch); setIsModalOpen(true); };
+
+    const handleFormSuccess = () => { setIsModalOpen(false) };
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingBatch, setEditingBatch] = useState(null);
+    const handleOpenEdit = (batch) => { setEditingBatch(batch); setIsModalOpen(true); };
 
     const deleteBatch = async (batchId) => {
         setLoadingDelete(true);
         try {
             await axios.delete(`${API_BASE_URL}/api/batches/${batchId}`);
             toast.success('Batch deleted successfully!');
-            fetchBatchesByCustomerId(); 
+            fetchBatchesByCustomerId();
         } catch (error) {
             console.error('Failed to delete batch:', error);
             toast.error(error.response?.data?.message || 'Failed to delete batch. Please try again.');
@@ -172,12 +174,12 @@ const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
             await deleteBatch(batchId);
         }
     };
-    
+
     if (!batches || batches.length === 0) {
         return (
             <div className="bg-white p-6 rounded-xl shadow-lg mb-8 text-center border-2 border-dashed border-gray-200">
                 <p className="text-gray-500 italic">No active or historical farming batches associated with this customer.</p>
-                <Link to='/create-batch' 
+                <Link to='/create-batch'
                     className="mt-4 inline-flex items-center bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition duration-150 text-sm"
                 >
                     <span className="mr-2">🌱</span> Start New Batch
@@ -188,155 +190,49 @@ const CustomerBatchList = ({ batches, fetchBatchesByCustomerId }) => {
 
     return (
         <div className="p-6 bg-gray-50">
-      {isModalOpen && (
-        <CreateBatchForm
-          batchData={editingBatch}
-          onSuccess={handleFormSuccess}
-          onClose={() => setIsModalOpen(false)}
-        />
-      )}
-      <hr className="my-8" />
+            {isModalOpen && (
+                <CreateBatchForm
+                    batchData={editingBatch}
+                    onSuccess={handleFormSuccess}
+                    onClose={() => setIsModalOpen(false)}
+                />
+            )}
+            <hr className="my-8" />
 
-      <div className="bg-white shadow-lg rounded-lg p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Batch ID', 'Farmer', 'Start Date', 'Status', "Chicks", 'Expected End Date', "Breed", 'Actions'].map((header) => (
-                  <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {batches.map((batch) => (
-                <tr key={batch._id}>
-                  <td className="px-6 py-4 text-sm text-gray-900">{batch._id.slice(-6)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{batch.farmer}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{new Date(batch.startDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${batch.active ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                      {batch.active ? 'Active' : 'Completed'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksQuantity}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{batch.expectedEndDate || 'N/A'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksBreed}</td>
-                  <td className="px-6 py-4 text-sm font-medium space-x-3">
-                    <button onClick={() => handleOpenEdit(batch)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                    <Link to={`/farm-batches/${batch._id}`} className="text-indigo-600 hover:text-indigo-900">Details</Link>
-                    <button onClick={() => handleDeleteBatch(batch._id)} className="text-red-600 hover:text-red-900">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    );
-};
-
-
-// --- CustomerSales Component (Merged & Improved UI) ---
-
-const CustomerSales = ({ customerId }) => {
-    const navigate = useNavigate();
-    const [memos, setMemos] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [expandedMemoId, setExpandedMemoId] = useState(null);
-
-    const fetchSalesByCustomerId = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await axios.get(`${API_BASE_URL}/api/sales/customer-sales/${customerId}`);
-            const data = res.data.data || [];
-            setMemos(data);
-        } catch (err) {
-            console.error(err);
-            setError(`Failed to load sales: ${err.response?.data?.message || err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (customerId) {
-            fetchSalesByCustomerId();
-        }
-    }, [customerId]);
-
-    const toggleExpand = (id) => setExpandedMemoId(expandedMemoId === id ? null : id);
-
-    if (loading) return <p className="p-4 text-center text-indigo-600 font-semibold">Loading Sales Memos...</p>;
-    if (error) return <div className="p-4 bg-red-100 text-red-700 rounded-xl mx-auto max-w-6xl shadow-md">{error}</div>;
-    if (memos.length === 0) return <div className="p-4 text-center text-gray-500 bg-white rounded-xl shadow-md">No sales memos found.</div>;
-
-    return (
-        <div className="p-0">
-            <h2 className="text-2xl font-extrabold mb-6 border-b pb-2 text-gray-800 flex items-center">
-                <span className="mr-3 text-green-500">💰</span> Sales History
-            </h2>
-
-            <div className="overflow-x-auto bg-white rounded-xl shadow-xl">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-600 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-xl">Memo No</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Total</th>
-                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Paid</th>
-                            <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider">Due/Credit</th>
-                            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-xl">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
-                        {memos.map((memo) => (
-                            <React.Fragment key={memo._id}>
-                                <tr
-                                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                                    onClick={() => toggleExpand(memo._id)}
-                                >
-                                    <td className="px-6 py-4 text-sm font-semibold text-indigo-700">{memo.memoNo}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(memo.date)}</td>
-                                    <td className="px-6 py-4 text-sm text-right font-bold text-gray-800">{formatCurrency(memo.total)}</td>
-                                    <td className="px-6 py-4 text-sm text-right text-gray-600">{formatCurrency(memo.paidAmount)}</td>
-                                    <td className={`px-6 py-4 text-sm text-right font-extrabold ${memo.due > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {formatCurrency(Math.abs(memo.due))}
+            <div className="bg-white shadow-lg rounded-lg p-6">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                {['Batch ID', 'Farmer', 'Start Date', 'Status', "Chicks", 'Expected End Date', "Breed", 'Actions'].map((header) => (
+                                    <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{header}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {batches.map((batch) => (
+                                <tr key={batch._id}>
+                                    <td className="px-6 py-4 text-sm text-gray-900">{batch._id.slice(-6)}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{batch.farmer}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(batch.startDate).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${batch.active ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                            {batch.active ? 'Active' : 'Completed'}
+                                        </span>
                                     </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); navigate(`/sales/${memo._id}`); }}
-                                            className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-indigo-600 transition"
-                                        >
-                                            View
-                                        </button>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksQuantity}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{batch.expectedEndDate || 'N/A'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{batch.chicksBreed}</td>
+                                    <td className="px-6 py-4 text-sm font-medium space-x-3">
+                                        <button onClick={() => handleOpenEdit(batch)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                        <Link to={`/farm-batches/${batch._id}`} className="text-indigo-600 hover:text-indigo-900">Details</Link>
+                                        <button onClick={() => handleDeleteBatch(batch._id)} className="text-red-600 hover:text-red-900">Delete</button>
                                     </td>
                                 </tr>
-
-                                {expandedMemoId === memo._id && (
-                                    <tr className="bg-gray-50">
-                                        <td colSpan="7" className="p-4 border-t border-indigo-200/50">
-                                            <h4 className="text-xs font-bold uppercase mb-2 text-indigo-600">Products Sold:</h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                                                {memo.products.map((product, idx) => (
-                                                    <div key={idx} className="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm border border-gray-100">
-                                                        <span className="font-medium text-gray-800 truncate">{product.item_name}</span>
-                                                        <span className="text-gray-600 text-right ml-4">
-                                                            **{product.qty}** x {formatCurrency(product.price)} = <span className="font-bold">{formatCurrency(product.subtotal)}</span>
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {/* Additional memo details like discount, VAT, etc. could go here */}
-                                        </td>
-                                    </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
@@ -347,7 +243,7 @@ const CustomerSales = ({ customerId }) => {
 
 const CustomerDetails = () => {
     const { id } = useParams();
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
     const CUSTOMER_API_URL = `${API_BASE_URL}/api/customers`;
 
     const [customer, setCustomer] = useState(null);
@@ -364,12 +260,12 @@ const CustomerDetails = () => {
             const res = await axios.get(`${CUSTOMER_API_URL}/${id}`);
             const customerData = res.data.data;
             setCustomer(customerData);
-            setForm(customerData); 
+            setForm(customerData);
         } catch (err) {
             console.error("Fetch Customer Details Error:", err);
             setError("Failed to fetch customer details. Does the ID exist?");
             setCustomer(null);
-        } 
+        }
     };
 
     const fetchBatchesByCustomerId = async () => {
@@ -379,16 +275,16 @@ const CustomerDetails = () => {
         } catch (err) {
             console.error("Fetch Batches Error:", err);
             setCustomerBatches([]);
-        } 
+        }
     };
-    
+
     // Combined Fetch Effect
     useEffect(() => {
         if (id) {
             const fetchData = async () => {
                 setIsLoading(true);
                 await Promise.all([
-                    fetchCustomerDetails(), 
+                    fetchCustomerDetails(),
                     fetchBatchesByCustomerId()
                 ]);
                 setIsLoading(false);
@@ -418,19 +314,19 @@ const CustomerDetails = () => {
             toast.success("Customer details updated successfully!");
         } catch (err) {
             console.error(err);
-             if (err.response && err.response.data && err.response.data.message) {
-                 setError(err.response.data.message);
-             } else {
-                 setError('Failed to update customer.');
-             }
+            if (err.response && err.response.data && err.response.data.message) {
+                setError(err.response.data.message);
+            } else {
+                setError('Failed to update customer.');
+            }
         } finally {
             setIsLoading(false);
         }
     };
-    
+
     // Function to open the modal and reset local error
     const openEditModal = () => {
-        if(customer) {
+        if (customer) {
             setForm({
                 ...customer,
                 due: String(customer.due || 0),
@@ -445,12 +341,12 @@ const CustomerDetails = () => {
     const handleDelete = async () => {
         if (!customer) return;
         if (!window.confirm(`Are you sure you want to permanently delete customer: ${customer.name}? This action cannot be undone.`)) return;
-        
+
         setIsLoading(true);
         try {
             await axios.delete(`${CUSTOMER_API_URL}/${id}`);
             toast.success(`Customer "${customer.name}" deleted successfully.`);
-            navigate('/customers'); 
+            navigate('/customers');
         } catch (err) {
             console.error(err);
             setError("Failed to delete customer.");
@@ -478,12 +374,12 @@ const CustomerDetails = () => {
     if (!customer) {
         return <div className="p-8 text-center text-xl text-gray-700">Customer not found.</div>;
     }
-    
+
     // 7. Render JSX
     return (
         <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
             <div className="mx-auto max-w-6xl">
-                
+
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                     <h1 className="text-4xl font-extrabold text-gray-900 flex items-center gap-3">
@@ -500,7 +396,7 @@ const CustomerDetails = () => {
                             ✏️ Edit
                         </button>
                         <button
-                            onClick={()=> navigate("pay-due")}
+                            onClick={() => navigate("pay-due")}
                             className="bg-yellow-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 flex items-center gap-2 shadow-md"
                             disabled={isLoading}
                         >
@@ -539,16 +435,16 @@ const CustomerDetails = () => {
                 {/* General Information & History Grid */}
                 <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl space-y-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-700 border-b pb-3 flex items-center"><span className="mr-2 text-indigo-500">ℹ️</span> Customer Information</h2>
-                    
+
                     {/* General Details Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <DetailItem label="Phone" value={customer.phone || 'N/A'} color="text-gray-700"/>
-                        <DetailItem label="Type" value={customer.type} badge={true}/>
-                        <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} color="text-gray-700"/>
-                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} color="text-gray-700"/>
-                        <DetailItem label="ID" value={customer._id} color="text-gray-700"/>
+                        <DetailItem label="Phone" value={customer.phone || 'N/A'} color="text-gray-700" />
+                        <DetailItem label="Type" value={customer.type} badge={true} />
+                        <DetailItem label="Joined Date" value={formatDate(customer.createdAt)} color="text-gray-700" />
+                        <DetailItem label="Last Purchase Date" value={formatDate(customer.last_purchase_date)} color="text-gray-700" />
+                        <DetailItem label="ID" value={customer._id} color="text-gray-700" />
                     </div>
-                    
+
                     {/* Address Detail - Spanning full width */}
                     <div className="pt-4 border-t">
                         <h3 className="text-sm font-bold text-gray-700 mb-1">Address</h3>
@@ -572,13 +468,17 @@ const CustomerDetails = () => {
                 {/* Batches and Sales Sections */}
                 <div className="space-y-8">
                     {/* Batches of this customer (using merged component) */}
-                    <CustomerBatchList 
+                    <CustomerBatchList
                         batches={customerBatches}
                         fetchBatchesByCustomerId={fetchBatchesByCustomerId}
                     />
 
                     {/* sales history of this customer (using merged component) */}
-                    <CustomerSales customerId={customer._id}/>
+                    <UniversalSalesManager
+                        context="customer"
+                        title={`History: ${customer.name}`}
+                        fetchUrl={`${API_BASE_URL}/api/sales/customer-sales/${customer._id}`}
+                    />
                 </div>
             </div>
 
@@ -586,7 +486,7 @@ const CustomerDetails = () => {
             {/* Edit Modal */}
             <EditCustomerModal
                 isOpen={isModalOpen}
-                onClose={() => {setIsModalOpen(false); setError(null);}} 
+                onClose={() => { setIsModalOpen(false); setError(null); }}
                 form={form}
                 isLoading={isLoading}
                 error={error}
