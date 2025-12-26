@@ -4,19 +4,21 @@ import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import PurchaseDetailsModal from './PurchaseDetailsModal';
 
 const ACCOUNTS_API = `${import.meta.env.VITE_API_BASE_URL}/api/payment_accounts`;
 
-const UniversalPurchaseManager = ({ 
-    fetchUrl = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`, 
+const UniversalPurchaseManager = ({
+    fetchUrl = `${import.meta.env.VITE_API_BASE_URL}/api/purchases`,
     title = "Purchase Dashboard",
-    context = "main" 
+    context = "main"
 }) => {
     const [purchases, setPurchases] = useState([]);
+    const [purchase, setPurchase] = useState({});
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
-    
+
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState("");
@@ -109,8 +111,14 @@ const UniversalPurchaseManager = ({
         }
     };
 
-    const remainingDueOnSelected = selectedPurchase 
-        ? (selectedPurchase.total_amount - selectedPurchase.paid_amount) 
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+    const handleViewPurchaseDetails = (p) =>{
+setPurchase(p);
+    }
+
+    const remainingDueOnSelected = selectedPurchase
+        ? (selectedPurchase.total_amount - selectedPurchase.paid_amount)
         : 0;
 
     if (loading) return <div className="p-10 text-center animate-pulse text-orange-600 font-bold text-xl">Syncing Inventory...</div>;
@@ -129,9 +137,9 @@ const UniversalPurchaseManager = ({
                     <button onClick={handleExportExcel} className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
                         📥 Excel
                     </button>
-                    
-                    <button 
-                        onClick={() => navigate("/purchases/create")} 
+
+                    <button
+                        onClick={() => navigate("/purchases/create")}
                         className="bg-orange-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-orange-700 transition"
                     >
                         + New Purchase
@@ -140,14 +148,14 @@ const UniversalPurchaseManager = ({
                     {/* Dashboard Contextual Buttons */}
                     {context === "main" && (
                         <>
-                            <button 
-                                onClick={() => navigate("/purchases/daily-purchases")} 
+                            <button
+                                onClick={() => navigate("/purchases/daily-purchases")}
                                 className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
                             >
                                 📅 Daily Log
                             </button>
-                            <button 
-                                onClick={() => navigate("/purchases/purchase-reports")} 
+                            <button
+                                onClick={() => navigate("/purchases/purchase-reports")}
                                 className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-100 transition"
                             >
                                 Purchase Audits
@@ -157,8 +165,8 @@ const UniversalPurchaseManager = ({
 
                     {/* Back button for reports/filtered views */}
                     {context !== "main" && (
-                        <button 
-                            onClick={() => navigate(-1)} 
+                        <button
+                            onClick={() => navigate(-1)}
                             className="bg-gray-100 text-gray-600 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition"
                         >
                             ← Back
@@ -230,6 +238,7 @@ const UniversalPurchaseManager = ({
                                             <button onClick={() => handleOpenPayment(p)} className="text-emerald-600 hover:text-emerald-700 font-bold text-sm underline underline-offset-4">Pay</button>
                                         )}
                                         <Link to={`/purchases/edit/${p._id}`} className="text-indigo-500 hover:text-indigo-700 font-bold text-sm">Edit</Link>
+                                        <button onClick={() => handleViewPurchaseDetails(p)} className="text-gray-400 hover:text-red-500 transition-colors">Details</button>
                                         <button onClick={() => handleDelete(p._id)} className="text-gray-400 hover:text-red-500 transition-colors">Delete</button>
                                     </td>
                                 </tr>
@@ -277,7 +286,7 @@ const UniversalPurchaseManager = ({
 
                         <div className="flex gap-4">
                             <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600">Cancel</button>
-                            <button 
+                            <button
                                 onClick={handleSubmitPayment}
                                 disabled={!selectedAccountId || !paymentAmount || paymentAmount > remainingDueOnSelected}
                                 className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-700 disabled:opacity-30 transition-all"
@@ -288,6 +297,13 @@ const UniversalPurchaseManager = ({
                     </div>
                 </div>
             )}
+
+            {/* Add this at the bottom of your JSX */}
+            <PurchaseDetailsModal
+                isOpen={isDetailOpen}
+                onClose={() => setIsDetailOpen(false)}
+                purchaseData={purchase} // Use the state from your parent component
+            />
         </div>
     );
 };

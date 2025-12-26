@@ -16,7 +16,7 @@ const translations = {
         sales: "Sales", purchases: "Purchases", transactions: "Transactions",
         payment_accounts: "Payment Accounts", batches: "Farm Batches",
         expenses: "Expenses", bills: "Bills", reports: "Reports",
-        appTitle: "CRM"
+        appTitle: "Modern Poultry"
     },
     bn: {
         dashboard: "ড্যাশবোর্ড", products: "পণ্যসমূহ", inventory: "ইনভেন্টরি",
@@ -24,7 +24,7 @@ const translations = {
         sales: "বিক্রয়", purchases: "ক্রয়", transactions: "লেনদেন",
         payment_accounts: "পেমেন্ট অ্যাকাউন্ট", batches: "ফার্ম ব্যাচ",
         expenses: "খরচ", bills: "বিল", reports: "রিপোর্ট",
-        appTitle: "সিআরএম"
+        appTitle: "Modern Poultry"
     }
 };
 

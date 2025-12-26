@@ -42,7 +42,7 @@ const translations = {
         quickNav: "Quick Navigation",
         welcome: "Welcome to your management control center.",
         appName: "App Dashboard",
-        appTitle: "📊 App CRM",
+        appTitle: "MP",
     },
     bn: {
         dashboard: "ড্যাশবোর্ড",
@@ -63,7 +63,7 @@ const translations = {
         quickNav: "দ্রুত নেভিগেশন",
         welcome: "আপনার ম্যানেজমেন্ট কন্ট্রোল সেন্টারে স্বাগতম।",
         appName: "অ্যাপ ড্যাশবোর্ড",
-        appTitle: "📊 অ্যাপ সিআরএম",
+        appTitle: "MP",
     },
 };
 
