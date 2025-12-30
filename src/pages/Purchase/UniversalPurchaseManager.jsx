@@ -54,15 +54,12 @@ const UniversalPurchaseManager = ({
             if (!p.products || p.products.length === 0) {
                 return [{
                     Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
-                    Supplier: p.supplier_id?.name || p.supplier_id || 'Walk-in',
-                    ProductID: 'N/A',
+                    Supplier: p.supplier_name|| 'Walk-in',
                     ProductName: 'No Products',
+                    ProductID: 'N/A',
                     Qty: 0,
                     Price: 0,
                     Subtotal: 0,
-                    Total_Bill: p.total_amount,
-                    Paid: p.paid_amount,
-                    Due: p.total_amount - p.paid_amount,
                     Method: p.payment_method
                 }];
             }
@@ -70,16 +67,13 @@ const UniversalPurchaseManager = ({
             // Map each product to its own row
             return p.products.map(item => ({
                 Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
-                Supplier: p.supplier_id?.name || p.supplier_id || 'Walk-in',
+                Supplier: p.supplier_name || 'Walk-in',
                 // Extracting ID from $oid if it exists, otherwise use raw ID
-                ProductID: item.product_id?.$oid || item.product_id || 'N/A',
                 ProductName: item.name || 'N/A',
+                ProductID: item.product_id?.$oid || item.product_id || 'N/A',
                 Qty: item.qty || 0,
                 Price: item.purchase_price || 0,
                 Subtotal: item.subtotal || 0,
-                Total_Bill: p.total_amount,
-                Paid: p.paid_amount,
-                Due: p.total_amount - p.paid_amount,
                 Method: p.payment_method
             }));
         });
