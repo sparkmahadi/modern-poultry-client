@@ -18,6 +18,7 @@ const UniversalPurchaseManager = ({
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    console.log(purchases);
 
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPurchase, setSelectedPurchase] = useState(null);
@@ -33,6 +34,7 @@ const UniversalPurchaseManager = ({
                 axios.get(fetchUrl),
                 axios.get(ACCOUNTS_API)
             ]);
+            console.log(pRes, aRes);
             setPurchases(pRes.data.data || []);
             setAccounts(aRes.data.data || []);
         } catch (err) {
@@ -45,18 +47,52 @@ const UniversalPurchaseManager = ({
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleExportExcel = () => {
-        const data = purchases.map(p => ({
-            Date: new Date(p.date).toLocaleDateString(),
-            Supplier: p.supplier_id?.name || p.supplier_id || 'N/A',
-            Total: p.total_amount,
-            Paid: p.paid_amount,
-            Due: p.total_amount - p.paid_amount,
-            Method: p.payment_method
-        }));
+        // We use flatMap because one purchase has many products
+        // This creates one row per product item
+        const data = purchases.flatMap(p => {
+            // If there are no products, return a basic row
+            if (!p.products || p.products.length === 0) {
+                return [{
+                    Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
+                    Supplier: p.supplier_id?.name || p.supplier_id || 'Walk-in',
+                    ProductID: 'N/A',
+                    ProductName: 'No Products',
+                    Qty: 0,
+                    Price: 0,
+                    Subtotal: 0,
+                    Total_Bill: p.total_amount,
+                    Paid: p.paid_amount,
+                    Due: p.total_amount - p.paid_amount,
+                    Method: p.payment_method
+                }];
+            }
+
+            // Map each product to its own row
+            return p.products.map(item => ({
+                Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
+                Supplier: p.supplier_id?.name || p.supplier_id || 'Walk-in',
+                // Extracting ID from $oid if it exists, otherwise use raw ID
+                ProductID: item.product_id?.$oid || item.product_id || 'N/A',
+                ProductName: item.name || 'N/A',
+                Qty: item.qty || 0,
+                Price: item.purchase_price || 0,
+                Subtotal: item.subtotal || 0,
+                Total_Bill: p.total_amount,
+                Paid: p.paid_amount,
+                Due: p.total_amount - p.paid_amount,
+                Method: p.payment_method
+            }));
+        });
+
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Purchases");
-        XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Purchase Details");
+
+        // Auto-size columns (optional but helpful)
+        const maxWidth = 20;
+        ws['!cols'] = Array(11).fill({ wch: maxWidth });
+
+        XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}_Detailed.xlsx`);
     };
 
     const filteredPurchases = useMemo(() => {
@@ -113,8 +149,8 @@ const UniversalPurchaseManager = ({
 
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-    const handleViewPurchaseDetails = (p) =>{
-setPurchase(p);
+    const handleViewPurchaseDetails = (p) => {
+        setPurchase(p);
     }
 
     const remainingDueOnSelected = selectedPurchase
