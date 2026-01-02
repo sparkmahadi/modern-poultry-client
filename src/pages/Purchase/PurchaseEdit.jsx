@@ -189,7 +189,7 @@ const PurchaseEdit = () => {
                     purchase_price: p.purchase_price,
                     subtotal: p.subtotal,
                 })),
-                date: new Date(purchase.date)?.toISOString(),
+                date: new Date(purchase.date),
                 total_amount: total_purchase,
                 paid_amount: purchase.paid_amount,
                 payment_method: purchase.payment_method,
@@ -208,11 +208,21 @@ const PurchaseEdit = () => {
         }
     };
 
-    const formatForInput = (dbDate) => {
-    if (!dbDate) return "";
-    // Removes milliseconds and the 'Z' to become YYYY-MM-DDTHH:mm
-    return new Date(dbDate).toISOString().split('.')[0].slice(0, 16);
+const formatForInput = (dbDate) => {
+  if (!dbDate) return "";
+  const d = new Date(dbDate);
+
+  const pad = (num) => String(num).padStart(2, '0');
+
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1); // Months are 0-indexed
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
 
 
 

@@ -6,6 +6,7 @@ const MonthlyPurchases = () => {
     const [selected, setSelected] = useState(format(new Date(), 'yyyy-MM'));
     const [year, month] = selected.split('-');
     const fetchUrl = `${import.meta.env.VITE_API_BASE_URL}/api/purchases/reports/monthly?month=${parseInt(month)}&year=${year}`;
+    console.log(fetchUrl);
 
     return (
         <div className="space-y-4">

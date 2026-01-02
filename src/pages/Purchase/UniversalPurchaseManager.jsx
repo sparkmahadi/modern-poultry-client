@@ -239,6 +239,7 @@ const UniversalPurchaseManager = ({
                 <table className="w-full text-left">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
+                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">SL</th>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Date</th>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Supplier</th>
                             <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Total</th>
@@ -248,10 +249,13 @@ const UniversalPurchaseManager = ({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                        {filteredPurchases.map((p) => {
+                        {filteredPurchases.map((p,idx) => {
                             const due = p.total_amount - p.paid_amount;
                             return (
                                 <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-6 py-4 text-sm font-bold text-orange-600">
+                                        {idx + 1}
+                                    </td>
                                     <td className="px-6 py-4 text-sm font-bold text-orange-600">
                                         {p.date ? format(new Date(p.date), "Pp") : "-"}
                                     </td>
