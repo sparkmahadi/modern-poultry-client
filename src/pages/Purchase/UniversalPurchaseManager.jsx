@@ -255,7 +255,7 @@ const UniversalPurchaseManager = ({
                                     <td className="px-6 py-4 text-sm font-bold text-orange-600">
                                         {p.date ? format(new Date(p.date), "Pp") : "-"}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{p.supplier_id?.name || p.supplier_id || 'Walk-in'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{p.supplier_name || p.supplier_id || 'Walk-in'}</td>
                                     <td className="px-6 py-4 text-sm text-right font-bold text-gray-800">৳{p.total_amount.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">৳{p.paid_amount.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-center">

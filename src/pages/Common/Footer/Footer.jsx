@@ -11,7 +11,7 @@ const Footer = () => {
           <Copyright size={18} className="text-gray-400" />
           <p className="text-sm md:text-base text-gray-300">
 
-            <p>&copy; {new Date().getFullYear()} PoultryCare. All rights reserved.</p>
+            &copy; {new Date().getFullYear()} PoultryCare. All rights reserved.
           </p>
         </div>
 

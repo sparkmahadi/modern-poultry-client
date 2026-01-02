@@ -329,7 +329,7 @@ const PurchaseForm = () => {
         account_id: form.account_id,
         paid_amount: Number(form.paid_amount) || 0,
 
-        date: new Date(date),
+        date: new Date(dateTime).toISOString(),
 
         total_amount: totalPurchase,
 
@@ -362,6 +362,23 @@ const PurchaseForm = () => {
 
 
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [dateTime, setDateTime] = useState("");
+
+
+  useEffect(() => {
+    const now = new Date();
+
+    // Convert to local datetime (required for datetime-local input)
+    const localDateTime = new Date(
+      now.getTime() - now.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .slice(0, 16); // yyyy-MM-ddTHH:mm
+
+    setDateTime(localDateTime);
+  }, []);
+
+
 
   // --- Render ---
   return (
@@ -371,13 +388,20 @@ const PurchaseForm = () => {
       <form onSubmit={handleSubmit}>
         <div className="max-w-5xl mx-auto gap-8">
 
-          {/* <div className="font-medium">{date}</div> */}
-          <input
-            type="date"
+          {/* <input
+            type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="p-1 border-b text-right focus:outline-none"
+          /> */}
+
+          <input
+            type="datetime-local"
+            value={dateTime}
+            onChange={(e) => setDateTime(e.target.value)}
+            className="p-1 border-b text-right focus:outline-none"
           />
+
 
 
           {/* === Left Column: Supplier Info and Financial Status === */}

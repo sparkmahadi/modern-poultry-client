@@ -51,9 +51,9 @@ const ProductRowEditor = ({ product, index, onChange, onRemove }) => {
                 ৳{(product.qty * product.purchase_price).toLocaleString()}
             </td>
             <td className="p-3 text-center">
-                <button 
-                    type="button" 
-                    onClick={() => onRemove(index)} 
+                <button
+                    type="button"
+                    onClick={() => onRemove(index)}
                     className="text-red-400 hover:text-red-600 transition-colors text-xl"
                 >
                     &times;
@@ -94,11 +94,12 @@ const PurchaseEdit = () => {
                 // 3. Map API data to local state
                 const initialPurchaseState = {
                     ...data,
+                    date: formatForInput(data.date),
                     totalAmount: data.total_amount,
                     paid_amount: data.paid_amount,
                     payment_method: data.payment_method,
                     supplier_id: data.supplier_id,
-                    account_id: data.account_id, 
+                    account_id: data.account_id,
                 };
                 setPurchase(initialPurchaseState);
 
@@ -155,7 +156,7 @@ const PurchaseEdit = () => {
         const { name, value, type } = e.target;
         const newValue = type === 'number' ? Number(value) : value;
 
-        if (["paid_amount", "payment_method", "account_id"].includes(name)) {
+        if (["date","paid_amount", "payment_method", "account_id"].includes(name)) {
             setPurchase({ ...purchase, [name]: newValue });
         }
     };
@@ -163,10 +164,14 @@ const PurchaseEdit = () => {
     // --- Submission Logic ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validation
         if (!purchase.products?.length) {
             toast.error('Purchase must contain at least one product.');
+            return;
+        }
+        if (!purchase.date) {
+            toast.error('Purchase must contain date and time.');
             return;
         }
         if (!purchase.account_id && purchase.payment_method !== 'credit') {
@@ -184,6 +189,7 @@ const PurchaseEdit = () => {
                     purchase_price: p.purchase_price,
                     subtotal: p.subtotal,
                 })),
+                date: new Date(purchase.date)?.toISOString(),
                 total_amount: total_purchase,
                 paid_amount: purchase.paid_amount,
                 payment_method: purchase.payment_method,
@@ -195,11 +201,21 @@ const PurchaseEdit = () => {
             toast.success('Purchase updated successfully!');
             navigate('/purchases');
         } catch (err) {
+            console.log(err);
             toast.error(err.response?.data?.message || 'Failed to update purchase.');
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    const formatForInput = (dbDate) => {
+    if (!dbDate) return "";
+    // Removes milliseconds and the 'Z' to become YYYY-MM-DDTHH:mm
+    return new Date(dbDate).toISOString().split('.')[0].slice(0, 16);
+};
+
+
+
 
     // --- Loading & Error States ---
     if (loading) return <div className="p-20 text-center text-xl animate-pulse">Loading Purchase Details... 🔄</div>;
@@ -218,7 +234,7 @@ const PurchaseEdit = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
-                    
+
                     {/* SECTION: Supplier Info */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50 p-6 rounded-xl border border-indigo-100">
                         <div>
@@ -231,6 +247,17 @@ const PurchaseEdit = () => {
                             <p className="text-sm text-gray-500">Last Purchase: <span className="text-gray-800 font-medium">{supplierDetails?.last_purchase_date || 'N/A'}</span></p>
                             <p className="text-xs text-gray-400 mt-2">Internal ID: {purchase.supplier_id}</p>
                         </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
+                        <h2 className="text-sm uppercase tracking-wider font-bold text-gray-400 mb-4">Transaction Schedule</h2>
+                        <InputField
+                            label="Purchase Date & Time"
+                            name="date"
+                            type="datetime-local"
+                            value={purchase.date} // This is now 'YYYY-MM-DDTHH:mm'
+                            onChange={handleChange}
+                        />
                     </div>
 
                     {/* SECTION: Product Table */}
@@ -271,7 +298,7 @@ const PurchaseEdit = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                         <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4">
                             <h2 className="text-lg font-bold text-gray-800">Payment Details</h2>
-                            
+
                             <div>
                                 <label className="text-sm font-semibold text-gray-600 block mb-2">Funding Source</label>
                                 <button
@@ -309,7 +336,7 @@ const PurchaseEdit = () => {
                                     <span className="text-indigo-200 text-sm">Including VAT</span>
                                 </div>
                             </div>
-                            
+
                             <button
                                 type="submit"
                                 disabled={isSubmitting || purchase.products.length === 0 || !purchase.supplier_id}
