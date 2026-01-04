@@ -101,7 +101,8 @@ const UniversalSalesManager = ({
     const handleDeleteSale = async (id) => {
         if (!window.confirm("Delete this record? This affects inventory.")) return;
         try {
-            await axios.delete(`${SALES_API}/${id}`);
+            const result = await axios.delete(`${SALES_API}/${id}`);
+            console.log(result);
             setMemos(prev => prev.filter(m => m._id !== id));
             toast.success('Deleted successfully');
         } catch (err) {

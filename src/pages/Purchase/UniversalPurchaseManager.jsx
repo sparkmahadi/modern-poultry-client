@@ -15,6 +15,7 @@ const UniversalPurchaseManager = ({
 }) => {
     const [purchases, setPurchases] = useState([]);
     const [purchase, setPurchase] = useState({});
+    // const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -112,6 +113,8 @@ const UniversalPurchaseManager = ({
         }
     };
 
+
+
     const handleOpenPayment = (purchase) => {
         setSelectedPurchase(purchase);
         setPaymentAmount("");
@@ -144,8 +147,9 @@ const UniversalPurchaseManager = ({
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     const handleViewPurchaseDetails = (p) => {
-        setPurchase(p);
-    }
+    setPurchase(p);        // Set the data to be displayed
+    setIsDetailOpen(true); // Open the modal
+};
 
     const remainingDueOnSelected = selectedPurchase
         ? (selectedPurchase.total_amount - selectedPurchase.paid_amount)
@@ -242,6 +246,7 @@ const UniversalPurchaseManager = ({
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">SL</th>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Date</th>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Supplier</th>
+                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Products</th>
                             <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Total</th>
                             <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Paid</th>
                             <th className="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase">Status</th>
@@ -260,6 +265,7 @@ const UniversalPurchaseManager = ({
                                         {p.date ? format(new Date(p.date), "Pp") : "-"}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{p.supplier_name || p.supplier_id || 'Walk-in'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{p?.products?.length}</td>
                                     <td className="px-6 py-4 text-sm text-right font-bold text-gray-800">৳{p.total_amount.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">৳{p.paid_amount.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-center">
