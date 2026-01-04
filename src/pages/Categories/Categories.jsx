@@ -1,256 +1,217 @@
-// src/components/Categories.jsx
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
+import { 
+  Plus, Trash2, Folder, ChevronRight, 
+  X, Palette, Type, AlertCircle, LayoutGrid 
+} from 'lucide-react';
 
 function Categories() {
+  const navigate = useNavigate();
   const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [apiInProgress, setApiInProgress] = useState(false); // To disable buttons during API calls
-
-  // State for Add New Category Form
+  const [apiInProgress, setApiInProgress] = useState(false);
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  
   const [newCategoryData, setNewCategoryData] = useState({
     id: '',
     name: '',
-    color: '#607D8B', // Default color
-    icon: 'tag',      // Default icon
+    color: '#3b82f6', // Default blue
+    icon: 'folder',
   });
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  // --- API Call to Fetch All Categories ---
   const fetchAllCategories = async () => {
-    setErrorMessage('');
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/api/utilities/categories`);
-      const data = response?.data?.data;
-      setAllCategories(data);
-      console.log("Fetched all categories:", data);
+      setAllCategories(response?.data?.data || []);
     } catch (error) {
-      console.error("Failed to fetch all categories:", error);
-      setErrorMessage(error.response?.data?.message || "Failed to load categories. Please try again.");
+      toast.error("Failed to load categories.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- API Call to Add New Main Category ---
-  const addMainCategory = async (category) => {
-    setErrorMessage('');
+  const handleNewCategorySubmit = async (e) => {
+    e.preventDefault();
     setApiInProgress(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/utilities/categories`, category);
-      console.log('Category added successfully:', response.data);
-      await fetchAllCategories(); // Re-fetch all categories to update the list
-      setShowAddCategoryForm(false); // Hide the form on success
-      setNewCategoryData({ id: '', name: '', color: '#607D8B', icon: 'tag' }); // Reset form
-      return { success: true };
+      await axios.post(`${API_BASE_URL}/api/utilities/categories`, newCategoryData);
+      toast.success("Category created!");
+      fetchAllCategories();
+      setShowAddCategoryForm(false);
+      setNewCategoryData({ id: '', name: '', color: '#3b82f6', icon: 'folder' });
     } catch (error) {
-      console.error("Failed to add category:", error);
-      setErrorMessage(error.response?.data?.message || "Failed to add category. Please try again.");
-      throw error;
+      toast.error(error.response?.data?.message || "Failed to create category.");
     } finally {
       setApiInProgress(false);
     }
   };
 
-  // --- Initial Data Fetch ---
-  useEffect(() => {
-    fetchAllCategories();
-  }, []);
-
-  // --- Handlers for Add New Category Form ---
-  const handleAddCategoryClick = () => {
-    setShowAddCategoryForm(true);
-    setNewCategoryData({ id: '', name: '', color: '#607D8B', icon: 'tag' }); // Reset form
-    setErrorMessage(''); // Clear previous errors
-  };
-
-  const handleNewCategoryChange = (e) => {
-    const { name, value } = e.target;
-    setNewCategoryData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
-  };
-
-  const handleNewCategorySubmit = async (e) => {
-    e.preventDefault();
-    if (!newCategoryData.name) {
-      setErrorMessage("Category ID and Name cannot be empty.");
-      return;
-    }
-    await addMainCategory(newCategoryData);
-  };
-
-  const handleCancelAddCategory = () => {
-    setShowAddCategoryForm(false);
-    setErrorMessage('');
-  };
-
-  const deleteMainCategory = async (categoryId) => {
-    const confirm = window.confirm("Are you sure to delete this category?", categoryId);
-    if (confirm) {
+  const handleDelete = async (e, id) => {
+    e.stopPropagation(); // Prevents navigating to details when clicking delete
+    if (window.confirm("Delete this category and its associations?")) {
+      setApiInProgress(true);
       try {
-        const response = await axios.delete(`${API_BASE_URL}/api/utilities/categories/${categoryId}`);
-        console.log('Subcategory deleted successfully:', response.data);
-        toast.success('Subcategory deleted successfully!');
-        await fetchAllCategories(); // Re-fetch to update state after deletion
-        return { success: true };
+        await axios.delete(`${API_BASE_URL}/api/utilities/categories/${id}`);
+        toast.success("Category removed.");
+        fetchAllCategories();
       } catch (error) {
-        console.error("Failed to delete subcategory:", error);
-        toast.error(error.response?.data?.message || "Failed to delete subcategory. Please try again.");
-        throw error;
+        toast.error("Failed to delete.");
       } finally {
         setApiInProgress(false);
       }
-    } else {
-      toast.info("Command Cancelled");
-    }
-    setApiInProgress(true);
-
-  };
-
-  const handleDeleteMainCategory = async (catId) => {
-    if (catId) {
-      await deleteMainCategory(catId);
-    } else {
-      toast.error("Error: Category ID missing for delete.");
     }
   };
 
+  useEffect(() => { fetchAllCategories(); }, []);
 
-  // --- Render Logic ---
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 p-4 font-sans flex items-center justify-center text-gray-700 text-xl">
-        Loading categories...
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans text-slate-500">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="font-bold tracking-tight">Loading Categories...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 font-sans flex items-center justify-center">
-      <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-4xl">
-        {errorMessage && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-4" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline ml-2">{errorMessage}</span>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-12 font-sans">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 flex items-center gap-3">
+              <LayoutGrid className="text-blue-600" /> Categories
+            </h2>
+            <p className="text-slate-500">Manage your product organization levels</p>
           </div>
-        )}
+          <button
+            onClick={() => setShowAddCategoryForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2"
+          >
+            <Plus size={20} /> Add New
+          </button>
+        </div>
 
-        <h2 className="text-3xl font-extrabold mb-6 text-center text-gray-800">All Categories</h2>
-
-        {/* Add New Category Button / Form */}
-        <div className="mb-6 border-b pb-4">
-          {!showAddCategoryForm ? (
-            <button
-              onClick={handleAddCategoryClick}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300 ease-in-out w-full"
-              disabled={apiInProgress}
-            >
-              Add New Category
-            </button>
-          ) : (
-            <form onSubmit={handleNewCategorySubmit} className="space-y-4 p-4 border border-gray-200 rounded-xl bg-gray-50">
-              <h3 className="text-xl font-semibold mb-2">New Category Details</h3>
-              <div>
-                <label htmlFor="newCategoryName" className="block text-sm font-medium text-gray-700">Name</label>
+        {/* Floating Add Form */}
+        {showAddCategoryForm && (
+          <div className="mb-10 bg-white p-8 rounded-3xl shadow-xl border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">New Category Details</h3>
+              <button onClick={() => setShowAddCategoryForm(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleNewCategorySubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1">
+                <label className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                  <Type size={16} /> Category Name
+                </label>
                 <input
                   type="text"
-                  id="newCategoryName"
-                  name="name"
-                  value={newCategoryData.name}
-                  onChange={handleNewCategoryChange}
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   required
-                  disabled={apiInProgress}
+                  placeholder="e.g. Electronics"
+                  className="w-full p-3 rounded-xl border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                  value={newCategoryData.name}
+                  onChange={(e) => setNewCategoryData({...newCategoryData, name: e.target.value})}
                 />
               </div>
-              <div className="flex items-center gap-4">
-                <div>
-                  <label htmlFor="newCategoryIcon" className="block text-sm font-medium text-gray-700">Icon (Font Awesome name)</label>
-                  <input
-                    type="text"
-                    id="newCategoryIcon"
-                    name="icon"
-                    value={newCategoryData.icon}
-                    onChange={handleNewCategoryChange}
-                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 'lightbulb'"
-                    disabled={apiInProgress}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="newCategoryColor" className="block text-sm font-medium text-gray-700">Color</label>
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                  <Palette size={16} /> Theme Color
+                </label>
+                <div className="flex items-center gap-3">
                   <input
                     type="color"
-                    id="newCategoryColor"
-                    name="color"
+                    className="h-12 w-20 rounded-lg cursor-pointer border-none bg-transparent"
                     value={newCategoryData.color}
-                    onChange={handleNewCategoryChange}
-                    className="mt-1 block w-12 h-10 p-1 border border-gray-300 rounded-md shadow-sm"
-                    disabled={apiInProgress}
+                    onChange={(e) => setNewCategoryData({...newCategoryData, color: e.target.value})}
                   />
+                  <span className="font-mono text-sm text-slate-500 uppercase">{newCategoryData.color}</span>
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
+              <div className="flex items-end gap-3">
                 <button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300 ease-in-out"
                   disabled={apiInProgress}
+                  className="flex-1 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all disabled:opacity-50"
                 >
-                  {apiInProgress ? 'Adding...' : 'Create Category'}
+                  {apiInProgress ? "Processing..." : "Create Category"}
                 </button>
                 <button
                   type="button"
-                  onClick={handleCancelAddCategory}
-                  className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300 ease-in-out"
-                  disabled={apiInProgress}
+                  onClick={() => setShowAddCategoryForm(false)}
+                  className="px-6 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
                 >
                   Cancel
                 </button>
               </div>
             </form>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* List of Categories */}
-        <div className="space-y-4 grid lg:grid-cols-2 lg:gap-10">
-          {allCategories?.length > 0 ? (
-            allCategories?.map(cat => (
-              <>
-                <Link
-                  key={cat.id}
-                  to={`/categories/${cat.id}`}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:bg-gray-100 transition duration-200 ease-in-out no-underline text-inherit"
-                >
-                  <span className="flex items-center gap-3 text-xl font-medium">
-                    <i className={`fa-solid fa-${cat.icon}`} style={{ color: cat.color }}></i>
-                    {cat.name}
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {allCategories.length > 0 ? (
+            allCategories.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => navigate(`/categories/${cat.id}`)}
+                className="group relative bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all cursor-pointer overflow-hidden"
+              >
+                {/* Visual Decoration */}
+                <div 
+                  className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 opacity-10 rounded-full transition-transform group-hover:scale-150"
+                  style={{ backgroundColor: cat.color }}
+                />
+
+                <div className="flex items-center gap-4 mb-6">
+                  <div 
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner"
+                    style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
+                  >
+                    {/* Fallback for FontAwesome vs Lucide Icons */}
+                    <Folder size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-slate-800 truncate">{cat.name}</h4>
+                    <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Category ID: {cat.id}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                  <span className="text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                    View Subcategories <ChevronRight size={16} />
                   </span>
                   <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300 ease-in-out text-sm"
+                    onClick={(e) => handleDelete(e, cat.id)}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    title="Delete Category"
                   >
-                    Details
+                    <Trash2 size={18} />
                   </button>
-                   <button
-                  onClick={() => handleDeleteMainCategory(cat.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-xl shadow-md transition duration-300 ease-in-out text-sm"
-                  disabled={apiInProgress}
-                >
-                  Delete
-                </button>
-                </Link>
-               
-              </>
+                </div>
+              </div>
             ))
           ) : (
-            <p className="text-center text-gray-600">No categories found. Click 'Add New Category' above to create one!</p>
+            <div className="col-span-full py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200 text-center">
+              <div className="inline-flex p-4 bg-slate-50 rounded-full mb-4">
+                <AlertCircle className="text-slate-300" size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">No categories yet</h3>
+              <p className="text-slate-500 mb-6">Organize your inventory by creating your first category.</p>
+              <button 
+                onClick={() => setShowAddCategoryForm(true)}
+                className="text-blue-600 font-bold hover:underline"
+              >
+                + Add Category Now
+              </button>
+            </div>
           )}
         </div>
       </div>

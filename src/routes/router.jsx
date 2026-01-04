@@ -32,6 +32,7 @@ import ExpenseThreads from '../pages/Expenses/ExpenseThreads';
 import SalesReports from '../pages/Sales/SalesReports/SalesReports';
 import PurchaseReports from '../pages/Purchase/PurchaseReports/PurchaseReports';
 import DailyPurchases from '../pages/Purchase/PurchaseReports/DailyPurchases';
+import ReportsPage from '../pages/Reports/ReportsPage';
 
 const router = createBrowserRouter([
   {
@@ -43,11 +44,13 @@ const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/dashboard', element: <Dashboard /> },
       { path: '/categories', element: <Categories /> },
+      { path: '/categories/:id', element: <CategoryDetail /> },
+
       { path: '/products', element: <Products /> },
       { path: '/inventory', element: <InventoryViewer /> },
       { path: '/customers', element: <CustomerManager /> },
       { path: '/customers/:id', element: <CustomerDetails /> },
-
+      
 
       { path: '/expense-threads', element: <ExpenseThreads /> },
       { path: '/bills', element: <BillsList /> },
@@ -61,7 +64,6 @@ const router = createBrowserRouter([
       { path: '/suppliers', element: <SupplierManager /> },
       { path: '/suppliers/:id', element: <SupplierDetails /> },
       { path: "/products/details/:id", element: <ProductDetail /> },
-      { path: '/categories/:id', element: <CategoryDetail /> },
 
       { path: '/sales', element: <SalesManager /> },
       { path: '/sales/:saleId', element: <SaleDetails /> },
@@ -78,6 +80,9 @@ const router = createBrowserRouter([
       { path: '/farm-batches', element: <BatchList /> },
       { path: '/farm-batches/:batchId', element: <BatchDetails /> },
       { path: '/farm-batches/create-batch', element: <CreateBatchForm /> },
+
+
+      { path: '/reports', element: <ReportsPage /> },
     ],
     // errorElement: <ErrorPage />,
   },
