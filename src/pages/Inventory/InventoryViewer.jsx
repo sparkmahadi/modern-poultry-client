@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Package, XCircle, Loader, DollarSign, TrendingUp, Zap, Edit, 
-  Trash2, Save, X, AlertTriangle, CheckCircle, Search, Filter, FileText 
+import {
+  Package, XCircle, Loader, DollarSign, TrendingUp, Zap, Edit,
+  Trash2, Save, X, AlertTriangle, CheckCircle, Search, Filter, FileText,
+  ArrowDownLeft,
+  ArrowUpRight
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -14,10 +16,25 @@ const InventoryViewer = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editFormData, setEditFormData] = useState({});
-  
+
+  const [isPIModalOpen, setIsPIModalOpen] = useState(false); // PI Details Modal
+const [selectedPIItem, setSelectedPIItem] = useState(null);
   // --- Search and Filter State ---
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+
+
+  const formatDate = (dateObj) => {
+    if (!dateObj) return 'N/A';
+    const dateStr = dateObj.$date || dateObj;
+    return new Date(dateStr).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // --- Utility Functions ---
   const handleApiError = (err, defaultMessage) => {
@@ -30,11 +47,11 @@ const InventoryViewer = () => {
   const getItemId = (item, index) => item._id?.$oid || item._id || item.id || index;
 
   // --- Search & Filter Logic ---
-// --- Search, Filter, and Sort Logic ---
+  // --- Search, Filter, and Sort Logic ---
   const filteredInventory = useMemo(() => {
     const result = inventory.filter(item => {
       const matchesSearch = (item.item_name || '').toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const stock = item.stock_qty ?? 0;
       const reorder = item.reorder_level ?? 0;
       const isOutOfStock = stock === 0;
@@ -77,9 +94,9 @@ const InventoryViewer = () => {
     if (!editingItem) return;
     const id = getItemId(editingItem);
     const updates = Object.fromEntries(
-      Object.entries(editFormData).map(([k, v]) => 
-        ['stock_qty', 'sale_price', 'last_purchase_price', 'reorder_level'].includes(k) 
-        ? [k, parseFloat(v)] : [k, v]
+      Object.entries(editFormData).map(([k, v]) =>
+        ['stock_qty', 'sale_price', 'last_purchase_price', 'reorder_level'].includes(k)
+          ? [k, parseFloat(v)] : [k, v]
       )
     );
 
@@ -103,11 +120,6 @@ const InventoryViewer = () => {
     }
   };
 
-  const handleShowPI = (item) => {
-    alert(`Generating Proforma Invoice for: ${item.item_name}`);
-    // You can navigate to a PI route or open a PDF generation logic here
-  };
-
   const openEditModal = (item) => {
     setEditingItem(item);
     setEditFormData({
@@ -123,6 +135,17 @@ const InventoryViewer = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
+  };
+
+  // --- PI Modal Handlers ---
+  const handleShowPI = (item) => {
+    setSelectedPIItem(item);
+    setIsPIModalOpen(true);
+  };
+
+  const closePIModal = () => {
+    setIsPIModalOpen(false);
+    setSelectedPIItem(null);
   };
 
   useEffect(() => { fetchInventory(); }, []);
@@ -153,7 +176,7 @@ const InventoryViewer = () => {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input 
+            <input
               type="text"
               placeholder="Search items by name..."
               value={searchQuery}
@@ -163,7 +186,7 @@ const InventoryViewer = () => {
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <Filter className="text-gray-400 w-5 h-5 hidden md:block" />
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full md:w-48 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
@@ -238,21 +261,17 @@ const InventoryViewer = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1">
-                          <button 
-                            onClick={() => handleShowPI(item)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg flex items-center text-xs font-semibold gap-1 transition-all"
-                            title="Show PI"
-                          >
-                            <FileText className="w-4 h-4" /> <span className="hidden lg:inline">Show PI</span>
+                          <button onClick={() => handleShowPI(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1">
+                            <FileText size={16} /> PI
                           </button>
-                          <button 
+                          <button
                             onClick={() => openEditModal(item)}
                             className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(item)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                             title="Delete"
@@ -277,6 +296,126 @@ const InventoryViewer = () => {
         </div>
       </div>
 
+
+      {/* --- Detailed PI Modal --- */}
+      {isPIModalOpen && selectedPIItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{selectedPIItem.item_name}</h3>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Proforma Details & History</p>
+                </div>
+              </div>
+              <button onClick={closePIModal} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <p className="text-blue-600 text-xs font-bold uppercase mb-1">Current Stock</p>
+                  <p className="text-2xl font-black text-blue-900">{selectedPIItem.stock_qty} <span className="text-sm font-normal text-blue-700">Units</span></p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                  <p className="text-green-600 text-xs font-bold uppercase mb-1">Avg. Purchase Price</p>
+                  <p className="text-2xl font-black text-green-900">${selectedPIItem.average_purchase_price || 0}</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                  <p className="text-purple-600 text-xs font-bold uppercase mb-1">Last Updated</p>
+                  <p className="text-sm font-bold text-purple-900 mt-2">{formatDate(selectedPIItem.last_updated)}</p>
+                </div>
+              </div>
+
+              {/* Purchase History */}
+              <div>
+                <div className="flex items-center gap-2 mb-4 text-gray-800 border-b pb-2">
+                  <ArrowDownLeft className="w-5 h-5 text-green-500" />
+                  <h4 className="font-bold">Purchase History</h4>
+                </div>
+                <div className="border rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                        <th className="px-4 py-3 text-center font-semibold text-gray-600">Qty</th>
+                        <th className="px-4 py-3 text-right font-semibold text-gray-600">Unit Price</th>
+                        <th className="px-4 py-3 text-right font-semibold text-gray-600">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {selectedPIItem.purchase_history?.length > 0 ? (
+                        selectedPIItem.purchase_history.map((log, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-gray-500">{formatDate(log.date)}</td>
+                            <td className="px-4 py-3 text-center font-medium">{log.qty}</td>
+                            <td className="px-4 py-3 text-right">${log.purchase_price}</td>
+                            <td className="px-4 py-3 text-right font-bold text-gray-900">${log.subtotal}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400 italic">No purchase records found.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Sale History */}
+              <div>
+                <div className="flex items-center gap-2 mb-4 text-gray-800 border-b pb-2">
+                  <ArrowUpRight className="w-5 h-5 text-blue-500" />
+                  <h4 className="font-bold">Recent Sale History</h4>
+                </div>
+                <div className="border rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                        <th className="px-4 py-3 text-center font-semibold text-gray-600">Qty Sold</th>
+                        <th className="px-4 py-3 text-right font-semibold text-gray-600">Unit Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {selectedPIItem.sale_history?.length > 0 ? (
+                        selectedPIItem.sale_history.map((log, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-gray-500">{formatDate(log.date)}</td>
+                            <td className="px-4 py-3 text-center font-medium">{log.qty}</td>
+                            <td className="px-4 py-3 text-right">${log.sale_price}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="3" className="px-4 py-8 text-center text-gray-400 italic">No sale records found.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={closePIModal}
+                className="px-6 py-2 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- Edit Modal --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -291,7 +430,7 @@ const InventoryViewer = () => {
                 <input
                   type="text"
                   value={editFormData.item_name}
-                  onChange={(e) => setEditFormData({...editFormData, item_name: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, item_name: e.target.value })}
                   className="w-full border-gray-300 rounded-lg p-2.5 border outline-indigo-500"
                   required
                 />
@@ -302,7 +441,7 @@ const InventoryViewer = () => {
                   <input
                     type="number"
                     value={editFormData.stock_qty}
-                    onChange={(e) => setEditFormData({...editFormData, stock_qty: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, stock_qty: e.target.value })}
                     className="w-full border-gray-300 rounded-lg p-2.5 border outline-indigo-500"
                   />
                 </div>
@@ -311,7 +450,7 @@ const InventoryViewer = () => {
                   <input
                     type="number"
                     value={editFormData.reorder_level}
-                    onChange={(e) => setEditFormData({...editFormData, reorder_level: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, reorder_level: e.target.value })}
                     className="w-full border-gray-300 rounded-lg p-2.5 border outline-indigo-500"
                   />
                 </div>
