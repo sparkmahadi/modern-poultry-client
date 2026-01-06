@@ -1,13 +1,14 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
+import TruckLoaderAuthenticating from '../components/Spinner/TruckLoaderAuthenticating';
 
 const ProtectedRoute = () => {
   const location = useLocation();
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <h2>Loading...</h2>;
+    return <TruckLoaderAuthenticating />;
   }
 
   if (!isAuthenticated) {

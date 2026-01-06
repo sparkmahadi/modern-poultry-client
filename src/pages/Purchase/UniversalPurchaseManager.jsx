@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import PurchaseDetailsModal from './PurchaseDetailsModal';
+import TruckLoader from '../../components/Spinner/TruckLoader';
 
 const ACCOUNTS_API = `${import.meta.env.VITE_API_BASE_URL}/api/payment_accounts`;
 
@@ -155,7 +156,7 @@ const UniversalPurchaseManager = ({
         ? (selectedPurchase.total_amount - selectedPurchase.paid_amount)
         : 0;
 
-    if (loading) return <div className="p-10 text-center animate-pulse text-orange-600 font-bold text-xl">Syncing Inventory...</div>;
+    if (loading) return <TruckLoader/>;
 
     return (
         <div className="container mx-auto p-6 max-w-7xl">

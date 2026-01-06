@@ -1,0 +1,40 @@
+/* TruckLoader.module.css */
+@keyframes motion {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(3px); }
+}
+
+@keyframes roadAnimation {
+  0% { transform: translateX(0px); }
+  100% { transform: translateX(-350px); }
+}
+
+.truckBody {
+  animation: motion 1s linear infinite;
+}
+
+.road::before, .road::after, .lampPost {
+  animation: roadAnimation 1.4s linear infinite;
+}
+
+.road::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 100%;
+  background-color: #282828;
+  right: -50%;
+  border-radius: 3px;
+  border-left: 10px solid white;
+}
+
+.road::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 100%;
+  background-color: #282828;
+  right: -65%;
+  border-radius: 3px;
+  border-left: 4px solid white;
+}

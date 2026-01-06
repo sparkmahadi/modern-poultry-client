@@ -6,6 +6,8 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router';
+import TruckLoader from '../../components/Spinner/TruckLoader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + '/api/inventory';
 
@@ -16,9 +18,10 @@ const InventoryViewer = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+  const navigate = useNavigate();
 
   const [isPIModalOpen, setIsPIModalOpen] = useState(false); // PI Details Modal
-const [selectedPIItem, setSelectedPIItem] = useState(null);
+  const [selectedPIItem, setSelectedPIItem] = useState(null);
   // --- Search and Filter State ---
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -152,8 +155,7 @@ const [selectedPIItem, setSelectedPIItem] = useState(null);
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-indigo-600 font-medium">
-      <Loader className="w-10 h-10 animate-spin mb-4" />
-      Syncing Inventory Data...
+      <TruckLoader/>
     </div>
   );
 
@@ -258,9 +260,13 @@ const [selectedPIItem, setSelectedPIItem] = useState(null);
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-green-700">Sale: ${parseFloat(item.sale_price || 0).toFixed(2)}</div>
                         <div className="text-[10px] text-gray-400 font-normal underline">Last Cost: ${parseFloat(item.last_purchase_price || 0).toFixed(2)}</div>
+                        <div className="text-[10px] text-gray-400 font-normal underline">Avg Purchase Cost: ${parseFloat(item.average_purchase_price || 0).toFixed(2)}</div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1">
+                          <button onClick={() => navigate(`${item._id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1">
+                            Details
+                          </button>
                           <button onClick={() => handleShowPI(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1">
                             <FileText size={16} /> PI
                           </button>

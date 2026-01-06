@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
+import TruckLoader from '../../components/Spinner/TruckLoader';
 
 const BASE_API_URL = import.meta.env.VITE_API_BASE_URL;
 const SALES_API = `${BASE_API_URL}/api/sales`;
@@ -110,7 +111,7 @@ const UniversalSalesManager = ({
         }
     };
 
-    if (loading) return <div className="p-10 text-center animate-pulse text-indigo-600 font-bold">Synchronizing Records...</div>;
+    if (loading) return <TruckLoader/>;
 
     return (
         <div className="container mx-auto p-6 max-w-7xl">

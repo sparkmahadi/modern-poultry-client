@@ -34,6 +34,7 @@ import DailyPurchases from '../pages/Purchase/PurchaseReports/DailyPurchases';
 import ReportsPage from '../pages/Reports/ReportsPage';
 import CreatePurchase from '../pages/Purchase/CreatePurchase/CreatePurchase';
 import ProtectedRoute from './ProtectedRoute';
+import InventoryDetail from '../pages/Inventory/InventoryDetail';
 
 const router = createBrowserRouter([
   {
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
           { path: '/products/details/:id', element: <ProductDetail /> },
 
           { path: '/inventory', element: <InventoryViewer /> },
+          { path: '/inventory/:id', element: <InventoryDetail /> },
 
           { path: '/customers', element: <CustomerManager /> },
           { path: '/customers/:id', element: <CustomerDetails /> },
