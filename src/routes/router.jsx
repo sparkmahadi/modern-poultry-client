@@ -33,58 +33,66 @@ import PurchaseReports from '../pages/Purchase/PurchaseReports/PurchaseReports';
 import DailyPurchases from '../pages/Purchase/PurchaseReports/DailyPurchases';
 import ReportsPage from '../pages/Reports/ReportsPage';
 import CreatePurchase from '../pages/Purchase/CreatePurchase/CreatePurchase';
+import ProtectedRoute from './ProtectedRoute';
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <MainLayout />,
     children: [
+      // PUBLIC ROUTES
       { path: '/', element: <Home /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/login', element: <LoginPage /> },
-      { path: '/dashboard', element: <Dashboard /> },
-      { path: '/categories', element: <Categories /> },
-      { path: '/categories/:id', element: <CategoryDetail /> },
 
-      { path: '/products', element: <Products /> },
-      { path: '/inventory', element: <InventoryViewer /> },
-      { path: '/customers', element: <CustomerManager /> },
-      { path: '/customers/:id', element: <CustomerDetails /> },
-      
+      // 🔐 PROTECTED ROUTES WRAPPER
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/dashboard', element: <Dashboard /> },
 
-      { path: '/expense-threads', element: <ExpenseThreads /> },
-      { path: '/bills', element: <BillsList /> },
+          { path: '/categories', element: <Categories /> },
+          { path: '/categories/:id', element: <CategoryDetail /> },
 
+          { path: '/products', element: <Products /> },
+          { path: '/products/details/:id', element: <ProductDetail /> },
 
-      { path: '/payment_accounts', element: <PaymentAccounts /> },
-      { path: '/payment_accounts/create', element: <CreatePaymentAccount /> },
+          { path: '/inventory', element: <InventoryViewer /> },
 
+          { path: '/customers', element: <CustomerManager /> },
+          { path: '/customers/:id', element: <CustomerDetails /> },
 
-      { path: '/transactions', element: <TransactionsList /> },
-      { path: '/suppliers', element: <SupplierManager /> },
-      { path: '/suppliers/:id', element: <SupplierDetails /> },
-      { path: "/products/details/:id", element: <ProductDetail /> },
+          { path: '/suppliers', element: <SupplierManager /> },
+          { path: '/suppliers/:id', element: <SupplierDetails /> },
 
-      { path: '/sales', element: <SalesManager /> },
-      { path: '/sales/:saleId', element: <SaleDetails /> },
-      { path: '/sales/daily-sales', element: <DailySales /> },
-      { path: '/sales/sales-reports', element: <SalesReports /> },
+          { path: '/transactions', element: <TransactionsList /> },
 
-      { path: '/sales/create-sale', element: <CreateSell /> },
-      { path: '/purchases', element: <PurchaseManager /> },
-      { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
-      { path: '/purchases/create', element: <CreatePurchase/> },
-      { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
-      { path: '/purchases/purchase-reports', element: <PurchaseReports /> },
+          { path: '/payment_accounts', element: <PaymentAccounts /> },
+          { path: '/payment_accounts/create', element: <CreatePaymentAccount /> },
 
-      { path: '/farm-batches', element: <BatchList /> },
-      { path: '/farm-batches/:batchId', element: <BatchDetails /> },
-      { path: '/farm-batches/create-batch', element: <CreateBatchForm /> },
+          { path: '/expense-threads', element: <ExpenseThreads /> },
+          { path: '/bills', element: <BillsList /> },
 
+          { path: '/sales', element: <SalesManager /> },
+          { path: '/sales/:saleId', element: <SaleDetails /> },
+          { path: '/sales/daily-sales', element: <DailySales /> },
+          { path: '/sales/sales-reports', element: <SalesReports /> },
+          { path: '/sales/create-sale', element: <CreateSell /> },
 
-      { path: '/reports', element: <ReportsPage /> },
+          { path: '/purchases', element: <PurchaseManager /> },
+          { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
+          { path: '/purchases/create', element: <CreatePurchase /> },
+          { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
+          { path: '/purchases/purchase-reports', element: <PurchaseReports /> },
+
+          { path: '/farm-batches', element: <BatchList /> },
+          { path: '/farm-batches/:batchId', element: <BatchDetails /> },
+          { path: '/farm-batches/create-batch', element: <CreateBatchForm /> },
+
+          { path: '/reports', element: <ReportsPage /> },
+        ],
+      },
     ],
-    // errorElement: <ErrorPage />,
   },
 ]);
 
