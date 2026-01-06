@@ -11,12 +11,12 @@ export default function MainLayout() {
 
             {/* Main Content Area */}
             <main className="flex-1 w-full">
-                <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+                {/* <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-0">
+                </div> */}
                     {/* Page Content */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[80vh] p-4 md:p-6">
+                    <div className="shadow-sm border border-gray-100 min-h-[80vh]">
                         <Outlet />
                     </div>
-                </div>
             </main>
 
             <Footer />

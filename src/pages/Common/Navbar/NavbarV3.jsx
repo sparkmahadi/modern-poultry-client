@@ -67,7 +67,7 @@ const NavbarV3 = () => {
   return (
     <div className="sticky top-0 z-[100] w-full font-inter">
       {/* --- MAIN NAVBAR --- */}
-      <nav className="bg-white border-b border-gray-200 px-4 h-16 flex items-center justify-between shadow-sm">
+      <nav className="bg-white border-b border-gray-200 px-4 lg:px-8 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-2 lg:space-x-8">
           <Link to="/" className="text-xl font-black text-blue-700 tracking-tighter mr-2">
             {t.brand}
@@ -107,7 +107,7 @@ const NavbarV3 = () => {
         </div>
 
         {/* Right Section: Lang & User */}
-        <div className="flex items-center space-x-2 lg:space-x-4">
+        <div className="flex items-center">
           <button onClick={toggleLanguage} className="hidden sm:flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg text-gray-500 font-bold text-xs uppercase">
              <Globe size={18} />
              <span>{language}</span>

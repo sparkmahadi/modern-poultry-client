@@ -25,16 +25,21 @@ const PurchaseForm = () => {
   const [products, setProducts] = useState([]);
 
   // State for search and UI
+  const [newProductName, setNewProductName] = useState("");
+
+  // --- UI & SEARCH STATE ---
   const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
   const [supplierSearchResults, setSupplierSearchResults] = useState([]);
   const [supplierSearchLoading, setSupplierSearchLoading] = useState(false);
+  
   const [productSearch, setProductSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [newProductName, setNewProductName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for final POST
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  
   // === NEW SUPPLIER MODAL STATES ===
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [addSupplierApiInProgress, setAddSupplierApiInProgress] = useState(false);
@@ -94,7 +99,7 @@ const PurchaseForm = () => {
     setProducts([]);
     setSupplierSearchQuery('');
     setSupplierSearchResults([]);
-    setForm(initialFormState); // Full reset for a new entry
+    setForm(initialFormState);
   }
 
   const handleChange = (e) => {
@@ -351,7 +356,7 @@ const PurchaseForm = () => {
       } else {
         toast.info(data.message)
       }
-      // resetForm();
+      resetForm();
     } catch (err) {
       console.error("Purchase failed:", err);
       toast.error(err.response?.data?.message || "Failed to create purchase.");
@@ -388,21 +393,12 @@ const PurchaseForm = () => {
       <form onSubmit={handleSubmit}>
         <div className="max-w-5xl mx-auto gap-8">
 
-          {/* <input
-            type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="p-1 border-b text-right focus:outline-none"
-          /> */}
-
           <input
             type="datetime-local"
             value={dateTime}
             onChange={(e) => setDateTime(e.target.value)}
             className="p-1 border-b text-right focus:outline-none"
           />
-
-
 
           {/* === Left Column: Supplier Info and Financial Status === */}
           <div className="lg:col-span-1 space-y-6">

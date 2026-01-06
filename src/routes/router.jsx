@@ -10,7 +10,6 @@ import ProductDetail from './../pages/Products/ProductDetail';
 import CategoryDetail from './../pages/Categories/CategoryDetail';
 import CreateSell from '../pages/Sales/CreateSell/CreateSell';
 import CustomerManager from '../pages/Customers/CustomerManager';
-import PurchaseForm from '../pages/Purchase/PurchaseForm';
 import SupplierManager from './../pages/Suppliers/SupplierManager';
 import Dashboard from './../pages/Dashboard/Dashboard';
 import SupplierDetails from './../pages/Suppliers/SupplierDetails';
@@ -33,6 +32,7 @@ import SalesReports from '../pages/Sales/SalesReports/SalesReports';
 import PurchaseReports from '../pages/Purchase/PurchaseReports/PurchaseReports';
 import DailyPurchases from '../pages/Purchase/PurchaseReports/DailyPurchases';
 import ReportsPage from '../pages/Reports/ReportsPage';
+import CreatePurchase from '../pages/Purchase/CreatePurchase/CreatePurchase';
 
 const router = createBrowserRouter([
   {
@@ -73,7 +73,7 @@ const router = createBrowserRouter([
       { path: '/sales/create-sale', element: <CreateSell /> },
       { path: '/purchases', element: <PurchaseManager /> },
       { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
-      { path: '/purchases/create', element: <PurchaseForm /> },
+      { path: '/purchases/create', element: <CreatePurchase/> },
       { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
       { path: '/purchases/purchase-reports', element: <PurchaseReports /> },
 
