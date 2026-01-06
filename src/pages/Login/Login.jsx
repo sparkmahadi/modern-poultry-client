@@ -2,13 +2,17 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import API from "../../lib/api";
 import React from "react";
 
 export default function LoginPage() {
     const { userInfo, isAuthenticated, login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+  const from = location.state?.from?.pathname || '/dashboard';
+
     const [form, setForm] = useState({ identifier: "", password: "" });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false); // loader state
@@ -41,7 +45,7 @@ export default function LoginPage() {
                 autoClose: 3000,
             });
 
-            navigate("/dashboard");
+            navigate(from, { replace: true });
         } catch (err) {
             const errorMsg = err.response?.data?.message || "Login failed";
             setError(errorMsg);
