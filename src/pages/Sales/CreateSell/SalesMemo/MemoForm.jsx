@@ -109,7 +109,7 @@ const MemoForm = () => {
         if (form.paid_amount > 0 && !form.payment_method) return toast.error("Select payment method for paid amount.");
 
         const payload = {
-            memoNo, date, customer_id: selectedCustomer._id,
+            memoNo, date: dateTime, customer_id: selectedCustomer._id,
             products: selectedProducts.map(p => ({ product_id: p._id, qty: p.qty, sale_price: p.price, subtotal: p.subtotal, name:p.item_name })),
             total_amount: total,
             paid_amount: form.paid_amount,
@@ -118,6 +118,8 @@ const MemoForm = () => {
             payment_due: due,
         };
 
+        console.log("sales data", payload);
+// return;
         try {
             const res = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
             if (res.data.success) {
@@ -128,10 +130,12 @@ const MemoForm = () => {
         } catch (err) { toast.error("Save Failed -" + err.response.data.message); }
     };
 
+        const [dateTime, setDateTime] = useState("");
+
     return (
         <div className="p-4 max-w-5xl mx-auto print:bg-white min-h-screen">
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-                <MemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} />
+                <MemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} dateTime={dateTime} setDateTime={setDateTime}/>
                 
                 <ProductTable t={t} search={search} setSearch={setSearch} searchResults={searchResults} addProduct={addProduct} selectedProducts={selectedProducts} removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} updateQty={updateQty} updatePrice={(id, p) => setSelectedProducts(prev => prev.map(item => item._id === id ? { ...item, price: Number(p), subtotal: +(item.qty * Number(p)).toFixed(2) } : item))} isCheckingStock={isCheckingStock} />
 

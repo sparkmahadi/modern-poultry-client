@@ -20,7 +20,8 @@ const SellToBatchMemoForm = ({ batchData, selectedCustomer }) => {
 
     // --- State Management ---
     const [memoNo, setMemoNo] = useState("");
-    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+    // const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+            const [dateTime, setDateTime] = useState("");
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     
@@ -122,7 +123,7 @@ const SellToBatchMemoForm = ({ batchData, selectedCustomer }) => {
 
         const payload = {
             memoNo,
-            date,
+            date: dateTime,
             customer_id:  selectedCustomer._id,
             products: selectedProducts.map(p => ({
                 product_id: p._id,
@@ -176,7 +177,7 @@ const SellToBatchMemoForm = ({ batchData, selectedCustomer }) => {
                 <MemoHeader 
                     t={t} lang={lang} setLang={setLang} 
                     memoNo={memoNo} setMemoNo={setMemoNo} 
-                    date={date} setDate={setDate} 
+                    dateTime={dateTime} setDateTime={setDateTime}
                     selectedCustomer={selectedCustomer} 
                 />
 

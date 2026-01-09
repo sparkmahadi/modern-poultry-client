@@ -30,7 +30,7 @@ function ProductDetail() {
       setCurrentProduct(data);
     } catch (error) {
       toast.error('Failed to load product details.');
-      navigate('/products');
+      // navigate('/products');
     } finally {
       setLoading(false);
     }
@@ -114,14 +114,14 @@ function ProductDetail() {
               <div>
                 <span className="text-blue-400 text-xs font-bold uppercase tracking-widest">Product ID: {id}</span>
                 <h1 className="text-3xl font-bold mt-1">
-                  {editingProduct ? "Editing Product" : productData.item_name}
+                  {editingProduct ? "Editing Product" : productData?.item_name}
                 </h1>
               </div>
               {!editingProduct && (
                 <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
                   <p className="text-white/60 text-xs uppercase font-bold">Total Valuation</p>
                   <p className="text-2xl font-black text-green-400">
-                    ${(productData.price * productData.quantity).toLocaleString()}
+                    ${(productData?.price * productData?.quantity).toLocaleString()}
                   </p>
                 </div>
               )}
@@ -188,7 +188,7 @@ function ProductDetail() {
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Package size={24} /></div>
                     <div>
                       <p className="text-sm text-slate-500 font-medium">Stock Unit</p>
-                      <p className="text-lg font-bold text-slate-800">{productData.unit || 'Standard'}</p>
+                      <p className="text-lg font-bold text-slate-800">{productData?.unit || 'Standard'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -198,7 +198,7 @@ function ProductDetail() {
                       <p className="text-lg font-bold text-slate-800">
                         {activeCategory?.name || 'N/A'} 
                         <span className="text-slate-300 mx-2">/</span>
-                        <span className="text-slate-500">{subcategories.find(s => s.id === productData.subcategory_id)?.name || 'General'}</span>
+                        <span className="text-slate-500">{subcategories.find(s => s.id === productData?.subcategory_id)?.name || 'General'}</span>
                       </p>
                     </div>
                   </div>
@@ -206,7 +206,7 @@ function ProductDetail() {
                     <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Calendar size={24} /></div>
                     <div>
                       <p className="text-sm text-slate-500 font-medium">Record Date</p>
-                      <p className="text-lg font-bold text-slate-800">{productData.date}</p>
+                      <p className="text-lg font-bold text-slate-800">{productData?.date}</p>
                     </div>
                   </div>
                 </div>
@@ -217,26 +217,26 @@ function ProductDetail() {
                   <div className="bg-slate-50 rounded-2xl p-6 space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500 font-medium flex items-center gap-2"><DollarSign size={16}/> Price per Unit</span>
-                      <span className="text-xl font-bold text-slate-900">${productData.price?.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-slate-900">${productData?.price?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500 font-medium flex items-center gap-2"><Info size={16}/> In Stock</span>
-                      <span className="text-xl font-bold text-slate-900">{productData.quantity} Units</span>
+                      <span className="text-xl font-bold text-slate-900">{productData?.quantity} Units</span>
                     </div>
                     <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
                       <span className="text-slate-800 font-bold italic">Total Value</span>
-                      <span className="text-2xl font-black text-blue-600">${(productData.price * productData.quantity).toLocaleString()}</span>
+                      <span className="text-2xl font-black text-blue-600">${(productData?.price * productData?.quantity).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Notes: Full Width */}
-                {productData.notes && (
+                {productData?.notes && (
                   <div className="md:col-span-2 mt-4 p-6 bg-yellow-50/50 rounded-2xl border border-yellow-100">
                     <h4 className="flex items-center gap-2 text-yellow-800 font-bold text-sm mb-2">
                       <FileText size={18} /> Internal Notes
                     </h4>
-                    <p className="text-slate-600 italic leading-relaxed">{productData.notes}</p>
+                    <p className="text-slate-600 italic leading-relaxed">{productData?.notes}</p>
                   </div>
                 )}
               </div>

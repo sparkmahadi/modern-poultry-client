@@ -1,6 +1,7 @@
 // MemoHeader.jsx - UPDATED
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Calendar } from "lucide-react";
 
 
 
@@ -13,8 +14,8 @@ const MemoHeader = ({
   setLang,
   memoNo,
   setMemoNo,
-  date,
-  setDate,
+  dateTime,
+  setDateTime,
   selectedCustomer, // New prop
   setSelectedCustomer // New prop
 }) => {
@@ -74,6 +75,8 @@ const MemoHeader = ({
     }
   };
 
+
+
   return (
     <>
 
@@ -105,13 +108,23 @@ const MemoHeader = ({
               className="p-1 border-b text-right font-bold focus:outline-none"
             />
 
-            <div className="font-medium">{t.date}</div>
+            {/* <div className="font-medium">{t.date}</div>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="p-1 border-b text-right focus:outline-none"
-            />
+            /> */}
+
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded border border-slate-200">
+              <Calendar className="w-5 h-5 text-slate-400" />
+              <input
+                type="datetime-local"
+                value={dateTime}
+                onChange={(e) => setDateTime(e.target.value)}
+                className="bg-transparent text-base font-medium text-slate-600 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
       </div>

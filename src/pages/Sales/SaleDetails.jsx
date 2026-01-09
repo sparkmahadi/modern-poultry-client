@@ -23,6 +23,7 @@ const SaleDetails = () => {
     // --- State Management ---
     const [loading, setLoading] = useState(false);
     const [memoNo, setMemoNo] = useState("");
+    const [dateTime, setDateTime] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [accountList, setAccountList] = useState([]);
@@ -153,7 +154,7 @@ const SaleDetails = () => {
 
         const payload = {
             memoNo, 
-            date, 
+            date: dateTime, 
             customer_id: selectedCustomer._id,
             products: selectedProducts.map(p => ({ 
                 product_id: p._id,
@@ -196,7 +197,7 @@ const SaleDetails = () => {
                 <MemoHeader 
                     t={t} lang={lang} setLang={setLang} 
                     memoNo={memoNo} setMemoNo={setMemoNo} 
-                    date={date} setDate={setDate} 
+                    dateTime={dateTime} setDateTime={setDateTime}
                     selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} 
                 />
                 

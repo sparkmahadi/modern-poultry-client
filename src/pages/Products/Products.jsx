@@ -127,6 +127,7 @@ function Products() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">SL</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Info</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock Unit</th>
@@ -136,8 +137,11 @@ function Products() {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredProducts.length > 0 ? (
-                                    filteredProducts.map((product) => (
+                                    filteredProducts.map((product, idx) => (
                                         <tr key={product.id} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-gray-800">{idx + 1}</div>
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-800">{product.item_name}</div>
                                                 <div className="text-xs text-gray-400 font-mono">ID: {product.id}</div>
@@ -157,7 +161,7 @@ function Products() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button 
-                                                    onClick={() => navigate(`/products/details/${product.id}`)}
+                                                    onClick={() => navigate(`/products/${product._id}`)}
                                                     className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 text-sm font-medium"
                                                 >
                                                     <Eye size={16} /> Details
