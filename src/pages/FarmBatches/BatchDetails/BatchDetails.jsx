@@ -16,7 +16,6 @@ const getAuthHeaders = () => {
     return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-        const [dateTime, setDateTime] = useState("");
 
 // Define the fields structure for display/edit
 const initialBatchState = {
@@ -36,7 +35,7 @@ const initialBatchState = {
  * A component to display and edit a single production batch's details.
  * @param {object} props
  * @param {string} props.batchId - The ID of the batch to display/edit.
- */
+*/
 const BatchDetails = () => {
     const {batchId} = useParams();
     const [batchData, setBatchData] = useState(initialBatchState);
@@ -44,9 +43,10 @@ const BatchDetails = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-
+    
     const [showSaleMemo, setShowSaleMemo] = useState(false);
     const [showSalesToBatch, setShowSalesToBatch] = useState(false);
+    const [dateTime, setDateTime] = useState("");
 
     // --- Data Fetching ---
     const fetchBatchData = useCallback(async () => {
