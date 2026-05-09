@@ -2,14 +2,15 @@ import axios from 'axios';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
-import { 
-    Search, 
-    Filter, 
-    Plus, 
-    ChevronLeft, 
-    Eye, 
-    Package, 
-    ArrowUpDown 
+import {
+    Search,
+    Filter,
+    Plus,
+    ChevronLeft,
+    Eye,
+    Package,
+    ArrowUpDown,
+    ChevronRight
 } from 'lucide-react';
 
 import AddProductModal from './../../components/AddProductModal/AddProductModal';
@@ -18,10 +19,10 @@ function Products() {
     const navigate = useNavigate();
 
     const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]); 
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [apiInProgress, setApiInProgress] = useState(false);
-    const [showAddProductModal, setShowAddProductModal] = useState(false); 
+    const [showAddProductModal, setShowAddProductModal] = useState(false);
 
     // Search and Filter State
     const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +52,85 @@ function Products() {
         }
     };
 
+
+
+    const handleUpdatePrices = async () => {
+        try {
+            /* ---------------------------------- */
+            /* 1️⃣ PREVENT MULTIPLE CLICKS */
+            /* ---------------------------------- */
+
+            if (apiInProgress) return;
+
+            setApiInProgress(true);
+
+            console.log(
+                "🚀 Updating all product prices..."
+            );
+
+            /* ---------------------------------- */
+            /* 2️⃣ API CALL */
+            /* ---------------------------------- */
+
+            const response =
+                await axios.patch(
+                    `${API_BASE_URL}/api/products/update-all-products-price`
+                );
+
+            console.log(
+                "✅ API Response:",
+                response.data
+            );
+
+            /* ---------------------------------- */
+            /* 3️⃣ SUCCESS TOAST */
+            /* ---------------------------------- */
+
+            if (response.data.success) {
+                const summary =
+                    response.data.summary;
+
+                toast.success(
+                    `Prices Updated Successfully! 
+Updated: ${summary.updated}
+Skipped: ${summary.skipped}`
+                );
+
+                /* ---------------------------------- */
+                /* 4️⃣ REFRESH PRODUCTS */
+                /* ---------------------------------- */
+
+                await fetchProducts();
+            } else {
+                toast.error(
+                    response.data.message ||
+                    "Failed to update prices"
+                );
+            }
+        } catch (error) {
+            console.error(
+                "❌ Update Prices Error:",
+                error
+            );
+
+            /* ---------------------------------- */
+            /* 5️⃣ ERROR HANDLING */
+            /* ---------------------------------- */
+
+            toast.error(
+                error?.response?.data
+                    ?.message ||
+                "Something went wrong while updating prices"
+            );
+        } finally {
+            /* ---------------------------------- */
+            /* 6️⃣ RESET LOADING */
+            /* ---------------------------------- */
+
+            setApiInProgress(false);
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
         fetchCategories();
@@ -59,8 +139,8 @@ function Products() {
     // Logic: Filter and Search Products
     const filteredProducts = useMemo(() => {
         return products.filter(product => {
-            const matchesSearch = product.item_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                 product.id.toString().includes(searchQuery);
+            const matchesSearch = product.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.id.toString().includes(searchQuery);
             const matchesCategory = selectedCategory === 'all' || product.category_id.toString() === selectedCategory;
             return matchesSearch && matchesCategory;
         });
@@ -71,7 +151,7 @@ function Products() {
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
             <div className="max-w-6xl mx-auto">
-                
+
                 {/* Header Area */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                     <div>
@@ -79,6 +159,13 @@ function Products() {
                         <p className="text-gray-500 text-sm">Manage {products.length} items in your catalog</p>
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            onClick={handleUpdatePrices}
+                            className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                        >
+                            <ChevronRight size={18} />
+                            Update Prices
+                        </button>
                         <button
                             onClick={() => navigate('/categories')}
                             className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
@@ -98,7 +185,7 @@ function Products() {
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input 
+                        <input
                             type="text"
                             placeholder="Search by name or ID..."
                             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
@@ -108,7 +195,7 @@ function Products() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Filter className="text-gray-400" size={18} />
-                        <select 
+                        <select
                             className="border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-gray-600"
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -156,11 +243,11 @@ function Products() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-semibold text-gray-900">
-                                                    ${product.price?.toFixed(2)}
+                                                    ৳{product.price?.toFixed(2)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button 
+                                                <button
                                                     onClick={() => navigate(`/products/${product._id}`)}
                                                     className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 text-sm font-medium"
                                                 >
@@ -182,9 +269,9 @@ function Products() {
                     </div>
                 </div>
 
-                <AddProductModal 
-                    isOpen={showAddProductModal} 
-                    onClose={() => setShowAddProductModal(false)} 
+                <AddProductModal
+                    isOpen={showAddProductModal}
+                    onClose={() => setShowAddProductModal(false)}
                     categories={categories}
                     onSave={fetchProducts} // Refresh after add
                     apiInProgress={apiInProgress}
