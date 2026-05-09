@@ -119,6 +119,7 @@ const MemoHeader = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("dateTime", dateTime);
     setIsLoading(true);
     setError(null);
     try {

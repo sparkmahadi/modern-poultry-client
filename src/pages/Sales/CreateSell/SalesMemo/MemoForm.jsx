@@ -123,6 +123,7 @@ const MemoForm = () => {
         try {
             const res = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
             if (res.data.success) {
+                toast.success(res.data.message)
                 toast.success(t.saveSuccess)
             } else{
                 toast.info(res.data.message);

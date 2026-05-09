@@ -323,6 +323,7 @@ const CreatePurchase = () => {
         if (products.length === 0) return alert("Add at least one product.");
 
         setIsSubmitting(true);
+        console.log("dateTime", dateTime, new Date(dateTime).toISOString());
         try {
             const payload = {
                 supplier_id: form.supplierId,
