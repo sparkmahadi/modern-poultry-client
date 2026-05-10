@@ -22,7 +22,7 @@ const MemoForm = () => {
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [error, setError] = useState("");
-    
+
     // Product Search & Selection
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
@@ -82,16 +82,16 @@ const MemoForm = () => {
 
     const addProduct = async (product) => {
         if (selectedProducts.find(p => p._id === product._id)) return toast.warn("Already added.");
-        
+
         setIsCheckingStock(true);
         try {
             const res = await axios.get(`${API_BASE_URL}/api/inventory/stock/${product._id}`);
             const stock = res.data?.stock || 0;
-            
+
             if (stock < 1 && !window.confirm("Stock is zero. Proceed anyway?")) return;
 
-            setSelectedProducts([...selectedProducts, { 
-                ...product, qty: 1, price: Number(product.price) || 0, subtotal: Number(product.price) || 0, availableStock: stock 
+            setSelectedProducts([...selectedProducts, {
+                ...product, qty: 1, price: Number(product.price) || 0, subtotal: Number(product.price) || 0, availableStock: stock
             }]);
             setSearch("");
             setSearchResults([]);
@@ -102,15 +102,33 @@ const MemoForm = () => {
         setSelectedProducts(prev => prev.map(p => p._id === id ? { ...p, qty: Number(qty), subtotal: +(Number(qty) * p.price).toFixed(2) } : p));
     };
 
+    const updateSubtotal = (id, subtotal) => {
+        setSelectedProducts(prev =>
+            prev.map(item => {
+                if (item._id !== id) return item;
+
+                const qty = Number(item.qty) || 0;
+                const subtotalValue = Number(subtotal) || 0;
+
+                return {
+                    ...item,
+                    subtotal: subtotalValue,
+                    price: qty > 0
+                        ? +(subtotalValue / qty).toFixed(2)
+                        : 0,
+                };
+            })
+        );
+    };
     const handleSave = async () => {
-        if (!memoNo ) return toast.error("Missing memono");
+        if (!memoNo) return toast.error("Missing memono");
         if (!selectedCustomer) return toast.error("Missing selected customer");
         if (selectedProducts.length === 0) return toast.error("Missing length");
         if (form.paid_amount > 0 && !form.payment_method) return toast.error("Select payment method for paid amount.");
 
         const payload = {
             memoNo, date: dateTime, customer_id: selectedCustomer._id,
-            products: selectedProducts.map(p => ({ product_id: p._id, qty: p.qty, sale_price: p.price, subtotal: p.subtotal, name:p.item_name })),
+            products: selectedProducts.map(p => ({ product_id: p._id, qty: p.qty, sale_price: p.price, subtotal: p.subtotal, name: p.item_name })),
             total_amount: total,
             paid_amount: form.paid_amount,
             payment_method: form.payment_method,
@@ -119,26 +137,26 @@ const MemoForm = () => {
         };
 
         console.log("sales data", payload);
-// return;
+        // return;
         try {
             const res = await axios.post(`${API_BASE_URL}/api/sales/create`, payload);
             if (res.data.success) {
                 toast.success(res.data.message)
                 toast.success(t.saveSuccess)
-            } else{
+            } else {
                 toast.info(res.data.message);
             }
         } catch (err) { toast.error("Save Failed -" + err.response.data.message); }
     };
 
-        const [dateTime, setDateTime] = useState("");
+    const [dateTime, setDateTime] = useState("");
 
     return (
         <div className="p-4 max-w-5xl mx-auto print:bg-white min-h-screen">
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-                <MemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} dateTime={dateTime} setDateTime={setDateTime}/>
-                
-                <ProductTable t={t} search={search} setSearch={setSearch} searchResults={searchResults} addProduct={addProduct} selectedProducts={selectedProducts} removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} updateQty={updateQty} updatePrice={(id, p) => setSelectedProducts(prev => prev.map(item => item._id === id ? { ...item, price: Number(p), subtotal: +(item.qty * Number(p)).toFixed(2) } : item))} isCheckingStock={isCheckingStock} />
+                <MemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} dateTime={dateTime} setDateTime={setDateTime} />
+
+                <ProductTable t={t} search={search} setSearch={setSearch} searchResults={searchResults} addProduct={addProduct} selectedProducts={selectedProducts} removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} updateQty={updateQty} updatePrice={(id, p) => setSelectedProducts(prev => prev.map(item => item._id === id ? { ...item, price: Number(p), subtotal: +(item.qty * Number(p)).toFixed(2) } : item))} isCheckingStock={isCheckingStock} updateSubtotal={updateSubtotal}/>
 
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-white border-t">
                     {/* Left: Notes & Actions */}
@@ -176,11 +194,11 @@ const MemoForm = () => {
                 </div>
             </div>
 
-            <PaymentModal 
-                isOpen={showPaymentModal} 
-                onClose={() => setShowPaymentModal(false)} 
-                onSelectPayment={handlePaymentSelect} 
-                defaultPaymentMethod={form.payment_method} 
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onSelectPayment={handlePaymentSelect}
+                defaultPaymentMethod={form.payment_method}
             />
         </div>
     );

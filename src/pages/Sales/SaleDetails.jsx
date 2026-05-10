@@ -76,6 +76,7 @@ const SaleDetails = () => {
                     price: p.sale_price,
                     subtotal: p.subtotal
                 }));
+                console.log("mappedProducts", mappedProducts);
                 setSelectedProducts(mappedProducts);
 
                 // Fetch full customer object
@@ -189,6 +190,25 @@ const SaleDetails = () => {
         }
     };
 
+        const updateSubtotal = (id, subtotal) => {
+        setSelectedProducts(prev =>
+            prev.map(item => {
+                if (item._id !== id) return item;
+
+                const qty = Number(item.qty) || 0;
+                const subtotalValue = Number(subtotal) || 0;
+
+                return {
+                    ...item,
+                    subtotal: subtotalValue,
+                    price: qty > 0
+                        ? +(subtotalValue / qty).toFixed(2)
+                        : 0,
+                };
+            })
+        );
+    };
+
     if (loading) return <div className="p-10 text-center animate-pulse text-indigo-600 font-bold">Synchronizing Data...</div>;
 
     return (
@@ -209,6 +229,7 @@ const SaleDetails = () => {
                     updateQty={updateQty} 
                     updatePrice={updatePrice} 
                     isCheckingStock={isCheckingStock} 
+                      updateSubtotal={updateSubtotal}
                 />
 
 

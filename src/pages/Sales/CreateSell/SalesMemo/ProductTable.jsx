@@ -36,6 +36,7 @@ const ProductTable = ({
   removeProduct,
   updateQty,
   updatePrice,
+  updateSubtotal
 }) => {
   return (
     <>
@@ -131,7 +132,23 @@ const ProductTable = ({
                     />
                   </td>
 
-                  <td className="p-3 text-right align-top font-semibold text-gray-900">৳ {Number(p.subtotal || 0).toFixed(2)}</td>
+                  {/* <td className="p-3 text-right align-top font-semibold text-gray-900">৳ {Number(p.subtotal || 0).toFixed(2)}</td> */}
+
+                  <td className="p-3 text-right align-top">
+                    <input
+                      type="number"
+                      min="0"
+                      value={p.subtotal || ""}
+                      onChange={(e) =>
+                        updateSubtotal(
+                          p._id,
+                          e.target.value
+                        )
+                      }
+                      className="border border-gray-300 rounded px-2 py-1 text-right w-full"
+                    />
+                  </td>
+
 
                   <td className="p-3 text-center align-top no-print">
                     <RemoveIcon onClick={() => removeProduct(p._id)} t={t} />
