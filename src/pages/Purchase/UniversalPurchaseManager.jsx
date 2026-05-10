@@ -190,6 +190,12 @@ const UniversalPurchaseManager = ({
                                 📅 Daily Log
                             </button>
                             <button
+                                onClick={() => navigate("/purchases/product-wise-purchases")}
+                                className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
+                            >
+                                ProductWise
+                            </button>
+                            <button
                                 onClick={() => navigate("/purchases/purchase-reports")}
                                 className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-100 transition"
                             >

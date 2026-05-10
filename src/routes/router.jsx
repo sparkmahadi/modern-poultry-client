@@ -35,6 +35,8 @@ import ReportsPage from '../pages/Reports/ReportsPage';
 import CreatePurchase from '../pages/Purchase/CreatePurchase/CreatePurchase';
 import ProtectedRoute from './ProtectedRoute';
 import InventoryDetail from '../pages/Inventory/InventoryDetail';
+import ProductWisePurchases from '../pages/Purchase/ProductWisePurchases';
+import ProductWiseSales from '../pages/Sales/ProductWiseSales';
 
 const router = createBrowserRouter([
   {
@@ -76,6 +78,7 @@ const router = createBrowserRouter([
           { path: '/bills', element: <BillsList /> },
 
           { path: '/sales', element: <SalesManager /> },
+          { path: '/sales/product-wise-sales', element: <ProductWiseSales /> },
           { path: '/sales/:saleId', element: <SaleDetails /> },
           { path: '/sales/daily-sales', element: <DailySales /> },
           { path: '/sales/sales-reports', element: <SalesReports /> },
@@ -83,6 +86,7 @@ const router = createBrowserRouter([
 
           { path: '/purchases', element: <PurchaseManager /> },
           { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
+          { path: '/purchases/product-wise-purchases', element: <ProductWisePurchases /> },
           { path: '/purchases/create', element: <CreatePurchase /> },
           { path: '/purchases/edit/:id', element: <PurchaseEdit /> },
           { path: '/purchases/purchase-reports', element: <PurchaseReports /> },

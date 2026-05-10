@@ -28,7 +28,7 @@ const SaleDetails = () => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    
+
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [selectedProducts, setSelectedProducts] = useState([]);
@@ -62,6 +62,13 @@ const SaleDetails = () => {
                 // Map backend keys to Form State
                 setMemoNo(s.memoNo);
                 setDate(new Date(s.date).toISOString().split("T")[0]);
+                setDateTime(
+                    s.date
+                        ? new Date(s.date)
+                            .toISOString()
+                            .slice(0, 16)
+                        : ""
+                );
                 setForm({
                     payment_method: s.payment_method || "",
                     account_id: s.account_id || "",
@@ -72,7 +79,7 @@ const SaleDetails = () => {
                 // Map products: backend 'sale_price' -> frontend 'price'
                 const mappedProducts = s.products.map(p => ({
                     ...p,
-                    _id: p.product_id, 
+                    _id: p.product_id,
                     price: p.sale_price,
                     subtotal: p.subtotal
                 }));
@@ -97,7 +104,7 @@ const SaleDetails = () => {
     }, [fetchSale]);
 
 
-        // Product Search Logic
+    // Product Search Logic
     useEffect(() => {
         const delay = setTimeout(() => {
             const q = search.trim();
@@ -131,8 +138,8 @@ const SaleDetails = () => {
             const stock = res.data?.stock || 0;
             if (stock < 1 && !window.confirm("Stock is zero. Proceed anyway?")) return;
 
-            setSelectedProducts([...selectedProducts, { 
-                ...product, qty: 1, price: Number(product.price) || 0, subtotal: Number(product.price) || 0, availableStock: stock 
+            setSelectedProducts([...selectedProducts, {
+                ...product, qty: 1, price: Number(product.price) || 0, subtotal: Number(product.price) || 0, availableStock: stock
             }]);
             setSearch("");
             setSearchResults([]);
@@ -154,15 +161,15 @@ const SaleDetails = () => {
         if (selectedProducts.length === 0) return toast.error("Please add products");
 
         const payload = {
-            memoNo, 
-            date: dateTime, 
+            memoNo,
+            date: dateTime,
             customer_id: selectedCustomer._id,
-            products: selectedProducts.map(p => ({ 
+            products: selectedProducts.map(p => ({
                 product_id: p._id,
-                name:p.item_name, 
-                qty: p.qty, 
-                sale_price: p.price, 
-                subtotal: p.subtotal 
+                name: p.item_name,
+                qty: p.qty,
+                sale_price: p.price,
+                subtotal: p.subtotal
             })),
             total_amount: total,
             paid_amount: form.paid_amount,
@@ -190,7 +197,7 @@ const SaleDetails = () => {
         }
     };
 
-        const updateSubtotal = (id, subtotal) => {
+    const updateSubtotal = (id, subtotal) => {
         setSelectedProducts(prev =>
             prev.map(item => {
                 if (item._id !== id) return item;
@@ -214,22 +221,22 @@ const SaleDetails = () => {
     return (
         <div className="p-4 max-w-5xl mx-auto print:bg-white min-h-screen">
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100">
-                <MemoHeader 
-                    t={t} lang={lang} setLang={setLang} 
-                    memoNo={memoNo} setMemoNo={setMemoNo} 
+                <MemoHeader
+                    t={t} lang={lang} setLang={setLang}
+                    memoNo={memoNo} setMemoNo={setMemoNo}
                     dateTime={dateTime} setDateTime={setDateTime}
-                    selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} 
+                    selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer}
                 />
-                
-                <ProductTable 
-                    t={t} search={search} setSearch={setSearch} 
-                    searchResults={searchResults} addProduct={addProduct} 
-                    selectedProducts={selectedProducts} 
-                    removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} 
-                    updateQty={updateQty} 
-                    updatePrice={updatePrice} 
-                    isCheckingStock={isCheckingStock} 
-                      updateSubtotal={updateSubtotal}
+
+                <ProductTable
+                    t={t} search={search} setSearch={setSearch}
+                    searchResults={searchResults} addProduct={addProduct}
+                    selectedProducts={selectedProducts}
+                    removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))}
+                    updateQty={updateQty}
+                    updatePrice={updatePrice}
+                    isCheckingStock={isCheckingStock}
+                    updateSubtotal={updateSubtotal}
                 />
 
 
@@ -269,11 +276,11 @@ const SaleDetails = () => {
                 </div>
             </div>
 
-            <PaymentModal 
-                isOpen={showPaymentModal} 
-                onClose={() => setShowPaymentModal(false)} 
-                onSelectPayment={handlePaymentSelect} 
-                defaultPaymentMethod={form.payment_method} 
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onSelectPayment={handlePaymentSelect}
+                defaultPaymentMethod={form.payment_method}
             />
         </div>
     );

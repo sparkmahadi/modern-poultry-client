@@ -22,6 +22,9 @@ const MemoHeader = ({
   selectedCustomer,
   setSelectedCustomer
 }) => {
+
+  console.log("dateTime", dateTime);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState([]);

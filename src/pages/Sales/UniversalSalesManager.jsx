@@ -141,6 +141,12 @@ const UniversalSalesManager = ({
                                 📅 Daily Sales
                             </button>
                             <button 
+                                onClick={() => navigate("/sales/product-wise-sales")} 
+                                className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
+                            >
+                                ProductWise
+                            </button>
+                            <button 
                                 onClick={() => navigate("/sales/sales-reports")} 
                                 className="bg-orange-50 text-orange-700 border border-orange-100 px-4 py-2.5 rounded-lg font-bold hover:bg-orange-100 transition"
                             >
