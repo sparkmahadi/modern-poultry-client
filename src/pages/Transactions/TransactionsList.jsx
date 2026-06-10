@@ -31,6 +31,7 @@ const TransactionsList = () => {
     setError(null);
     try {
       const response = await axios.get(TRANSACTIONS_API_URL);
+      console.log(response.data.data);
       setTransactions(response.data.data);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);

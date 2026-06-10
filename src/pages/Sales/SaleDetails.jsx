@@ -24,7 +24,7 @@ const SaleDetails = () => {
     const [loading, setLoading] = useState(false);
     const [memoNo, setMemoNo] = useState("");
     const [dateTime, setDateTime] = useState("");
-    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+    // const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -61,14 +61,8 @@ const SaleDetails = () => {
                 console.log(s);
                 // Map backend keys to Form State
                 setMemoNo(s.memoNo);
-                setDate(new Date(s.date).toISOString().split("T")[0]);
-                setDateTime(
-                    s.date
-                        ? new Date(s.date)
-                            .toISOString()
-                            .slice(0, 16)
-                        : ""
-                );
+                // setDate(new Date(s.date).toISOString().split("T")[0]);
+                setDateTime(s.date ? s.date : "");
                 setForm({
                     payment_method: s.payment_method || "",
                     account_id: s.account_id || "",
@@ -116,6 +110,14 @@ const SaleDetails = () => {
         return () => clearTimeout(delay);
     }, [search]);
 
+
+    const toDatetimeLocal = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date - offset).toISOString().slice(0, 16);
+};
+
     // --- Calculations ---
     const total = selectedProducts.reduce((acc, p) => acc + Number(p.subtotal || 0), 0);
     const due = Number(total.toFixed(2)) - Number(form.paid_amount || 0);
@@ -162,7 +164,7 @@ const SaleDetails = () => {
 
         const payload = {
             memoNo,
-            date: dateTime,
+            date: dateTime ? new Date(dateTime).toISOString() : new Date().toISOString(),
             customer_id: selectedCustomer._id,
             products: selectedProducts.map(p => ({
                 product_id: p._id,

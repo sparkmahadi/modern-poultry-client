@@ -53,6 +53,14 @@ const MemoHeader = ({
     fetchCustomers();
   }, []);
 
+
+  const toDatetimeLocal = (isoString) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date - offset).toISOString().slice(0, 16);
+};
+
   const fetchCustomers = async () => {
     setIsLoading(true);
     setError(null);
@@ -201,8 +209,8 @@ const MemoHeader = ({
               <Calendar className="w-5 h-5 text-slate-400" />
               <input
                 type="datetime-local"
-                value={dateTime}
-                onChange={(e) => setDateTime(e.target.value)}
+         value={toDatetimeLocal(dateTime)}
+                onChange={(e) => setDateTime(new Date(e.target.value).toISOString())}
                 className="bg-transparent text-base font-medium text-slate-600 focus:outline-none"
               />
             </div>
