@@ -153,6 +153,7 @@ const CustomerManager = () => {
         setIsLoading(true);
         try {
             const res = await axios.get(API_BASE_URL);
+            console.log(res.data.data);
             setCustomers(res.data.data || []);
         } catch (err) { setError("Data retrieval failed."); }
         finally { setIsLoading(false); }

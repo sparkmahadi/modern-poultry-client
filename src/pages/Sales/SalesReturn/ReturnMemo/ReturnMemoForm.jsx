@@ -3,27 +3,26 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 // Sub-components
-import MemoHeader from "./MemoHeader";
-import ProductTable from "./ProductTable";
-import textConstants from "./memoTexts";
+import ReturnMemoHeader from "./ReturnMemoHeader";
+import ReturnProductTable from "./ReturnProductTable";
+import textConstants from "./ReturnMemoTexts";
 import PaymentModal from "../../../Purchase/PaymentModal";
 import { InputField } from "../../../Purchase/FormComponents";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const MemoForm = () => {
+const ReturnMemoForm = () => {
     const [lang, setLang] = useState("en");
     const t = useMemo(() => textConstants[lang], [lang]);
 
     // --- State Management ---
     const [memoNo, setMemoNo] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-    const [dateTime, setDateTime] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [accountList, setAccountList] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [error, setError] = useState("");
-    
+
     // Product Search & Selection
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
@@ -150,13 +149,14 @@ const MemoForm = () => {
         } catch (err) { toast.error("Save Failed -" + err.response.data.message); }
     };
 
+    const [dateTime, setDateTime] = useState("");
 
     return (
         <div className="p-4 max-w-5xl mx-auto print:bg-white min-h-screen">
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-                <MemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} dateTime={dateTime} setDateTime={setDateTime} />
+                <ReturnMemoHeader t={t} lang={lang} setLang={setLang} memoNo={memoNo} setMemoNo={setMemoNo} date={date} setDate={setDate} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} dateTime={dateTime} setDateTime={setDateTime} />
 
-                <ProductTable t={t} search={search} setSearch={setSearch} searchResults={searchResults} addProduct={addProduct} selectedProducts={selectedProducts} removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} updateQty={updateQty} updatePrice={(id, p) => setSelectedProducts(prev => prev.map(item => item._id === id ? { ...item, price: Number(p), subtotal: +(item.qty * Number(p)).toFixed(2) } : item))} isCheckingStock={isCheckingStock} updateSubtotal={updateSubtotal}/>
+                <ReturnProductTable t={t} search={search} setSearch={setSearch} searchResults={searchResults} addProduct={addProduct} selectedProducts={selectedProducts} removeProduct={(id) => setSelectedProducts(prev => prev.filter(p => p._id !== id))} updateQty={updateQty} updatePrice={(id, p) => setSelectedProducts(prev => prev.map(item => item._id === id ? { ...item, price: Number(p), subtotal: +(item.qty * Number(p)).toFixed(2) } : item))} isCheckingStock={isCheckingStock} updateSubtotal={updateSubtotal}/>
 
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-white border-t">
                     {/* Left: Notes & Actions */}
@@ -204,4 +204,4 @@ const MemoForm = () => {
     );
 };
 
-export default MemoForm;
+export default ReturnMemoForm;

@@ -37,6 +37,7 @@ import ProtectedRoute from './ProtectedRoute';
 import InventoryDetail from '../pages/Inventory/InventoryDetail';
 import ProductWisePurchases from '../pages/Purchase/ProductWisePurchases';
 import ProductWiseSales from '../pages/Sales/ProductWiseSales';
+import TakeReturn from '../pages/Sales/SalesReturn/TakeReturn';
 
 const router = createBrowserRouter([
   {
@@ -83,6 +84,7 @@ const router = createBrowserRouter([
           { path: '/sales/daily-sales', element: <DailySales /> },
           { path: '/sales/sales-reports', element: <SalesReports /> },
           { path: '/sales/create-sale', element: <CreateSell /> },
+          { path: '/sales/sales-return', element: <TakeReturn /> },
 
           { path: '/purchases', element: <PurchaseManager /> },
           { path: '/purchases/daily-purchases', element: <DailyPurchases /> },

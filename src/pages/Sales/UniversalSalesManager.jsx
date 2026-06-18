@@ -42,6 +42,7 @@ const UniversalSalesManager = ({
                 axios.get(fetchUrl),
                 axios.get(ACCOUNTS_API)
             ]);
+            console.log(salesRes.data.data);
             setMemos(salesRes.data.data || []);
             setAccounts(accountsRes.data.data || []);
         } catch (err) {
@@ -362,7 +363,7 @@ const TableRow = ({ memo, isExpanded, onToggle, onCollect, onView, onDelete }) =
             <tr className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4 text-sm font-bold text-indigo-600">{memo?.date ? format(new Date(memo.date), "Pp") : "-"}</td>
                 <td className="px-6 py-4 text-sm font-bold text-indigo-600">{memo.memoNo}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-700">{memo.customer_id?.name || memo.customer_id || "Walking Customer"}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-700">{memo?.customer_name || memo.customer_id || "Walking Customer"}</td>
                 <td className="px-6 py-4 text-sm text-right font-black text-gray-800">৳{due.toFixed(2)}</td>
                 <td className="px-6 py-4 text-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold border ${due > 0 ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
