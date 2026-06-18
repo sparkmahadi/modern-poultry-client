@@ -111,22 +111,22 @@ const UniversalSalesManager = ({
         }
     };
 
-    if (loading) return <TruckLoader/>;
+    if (loading) return <TruckLoader />;
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 max-w-7xl">
             {/* Header */}
-           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-800">{title}</h1>
                     <p className="text-gray-500 text-sm">Managing {memos.length} records in this view</p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
                     {/* UNIVERSAL BUTTON: Always visible or based on context */}
-                    <button 
-                        onClick={() => navigate("/sales/create-sale")} 
-                        className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition"
+                    <button
+                        onClick={() => navigate("/sales/create-sale")}
+                        className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition"
                     >
                         + New Sale
                     </button>
@@ -134,20 +134,20 @@ const UniversalSalesManager = ({
                     {/* CONDITIONAL BUTTONS: Only rendered on the "main" dashboard */}
                     {context === "main" && (
                         <>
-                            <button 
-                                onClick={() => navigate("/sales/daily-sales")} 
+                            <button
+                                onClick={() => navigate("/sales/daily-sales")}
                                 className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
                             >
                                 📅 Daily Sales
                             </button>
-                            <button 
-                                onClick={() => navigate("/sales/product-wise-sales")} 
+                            <button
+                                onClick={() => navigate("/sales/product-wise-sales")}
                                 className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
                             >
                                 ProductWise
                             </button>
-                            <button 
-                                onClick={() => navigate("/sales/sales-reports")} 
+                            <button
+                                onClick={() => navigate("/sales/sales-reports")}
                                 className="bg-orange-50 text-orange-700 border border-orange-100 px-4 py-2.5 rounded-lg font-bold hover:bg-orange-100 transition"
                             >
                                 Sales Reports
@@ -157,8 +157,8 @@ const UniversalSalesManager = ({
 
                     {/* BACK BUTTON: Useful for Customer/Report views */}
                     {context !== "main" && (
-                        <button 
-                            onClick={() => navigate(-1)} 
+                        <button
+                            onClick={() => navigate(-1)}
                             className="bg-gray-100 text-gray-600 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition"
                         >
                             ← Back
@@ -168,7 +168,7 @@ const UniversalSalesManager = ({
             </div>
 
             {/* Stats Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
                 <StatCard label="Total Amount" value={stats.total} color="indigo" />
                 <StatCard label="Total Collected" value={stats.paid} color="green" />
                 <StatCard label="Total Receivables" value={stats.due} color="orange" />
@@ -189,7 +189,7 @@ const UniversalSalesManager = ({
 
             {/* Main Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left">
+                <table className="w-full text-left hidden lg:block">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Date</th>
@@ -217,6 +217,97 @@ const UniversalSalesManager = ({
                 {filteredMemos.length === 0 && <div className="p-20 text-center text-gray-400 font-medium italic">No matching records found.</div>}
             </div>
 
+
+            {/* Mobile, Tablet View */}
+            <div className="lg:hidden space-y-4">
+                {filteredMemos.map((memo) => {
+                    const due = memo.due_amount || memo.due || 0;
+
+                    return (
+                        <div
+                            key={memo._id}
+                            className="bg-white rounded-xl border p-4 shadow-sm"
+                        >
+                            <div className="flex justify-between items-start gap-2">
+                                <span className="font-bold text-sm">
+                                    {memo.memoNo}
+                                </span>
+
+                                <span
+                                    className={`text-xs px-2 py-1 rounded-full ${due > 0
+                                        ? "bg-orange-100 text-orange-600"
+                                        : "bg-green-100 text-green-600"
+                                        }`}
+                                >
+                                    {due > 0 ? "Due" : "Paid"}
+                                </span>
+                            </div>
+
+                            <p className="text-sm text-gray-500 mt-2">
+                                {memo.customer_id?.name || "Walking Customer"}
+                            </p>
+
+                            <p className="text-xs text-gray-400 mt-1">
+                                {memo?.date
+                                    ? format(new Date(memo.date), "Pp")
+                                    : "-"}
+                            </p>
+
+                            <p className="mt-3 font-bold">
+                                Due: ৳{due.toFixed(2)}
+                            </p>
+
+                            <div className="flex flex-wrap gap-2 mt-4">
+                                <button
+                                    onClick={() => navigate(`/sales/${memo._id}`)}
+                                    className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded text-sm"
+                                >
+                                    View
+                                </button>
+
+                                {due > 0 && (
+                                    <button
+                                        onClick={() => handleOpenPayment(memo)}
+                                        className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm"
+                                    >
+                                        Collect
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => setExpandedMemoId(
+                                        expandedMemoId === memo._id ? null : memo._id
+                                    )}
+                                    className="px-3 py-1 bg-gray-50 text-gray-600 rounded text-sm"
+                                >
+                                    Items
+                                </button>
+                            </div>
+
+                            {expandedMemoId === memo._id && (
+                                <div className="mt-4 border-t pt-3">
+                                    {memo.products?.map((p, i) => (
+                                        <div
+                                            key={i}
+                                            className="flex justify-between py-1 text-sm"
+                                        >
+                                            <span>
+                                                {p.item_name || p.name} × {p.qty}
+                                            </span>
+
+                                            <span>
+                                                ৳{(p.subtotal || 0).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+
             {showPaymentModal && selectedMemo && (
                 <PaymentModal
                     selectedMemo={selectedMemo}
@@ -235,14 +326,34 @@ const UniversalSalesManager = ({
 
 // --- Sub-Components (Keep these in the same file or separate UI file) ---
 
-const StatCard = ({ label, value, color }) => (
-    <div className={`bg-white p-6 rounded-2xl border-l-4 border-${color}-500 shadow-sm`}>
-        <p className="text-gray-500 text-sm font-bold uppercase tracking-wider">{label}</p>
-        <p className={`text-3xl font-black ${color === 'green' ? 'text-green-600' : color === 'orange' ? 'text-orange-600' : 'text-gray-800'}`}>
-            ৳{value.toLocaleString()}
-        </p>
-    </div>
-);
+const StatCard = ({ label, value, color }) => {
+    const styles = {
+        indigo: {
+            border: "border-indigo-500",
+            text: "text-indigo-600"
+        },
+        green: {
+            border: "border-green-500",
+            text: "text-green-600"
+        },
+        orange: {
+            border: "border-orange-500",
+            text: "text-orange-600"
+        }
+    };
+
+    return (
+        <div className={`bg-white p-4 md:p-6 rounded-2xl border-l-4 ${styles[color].border} shadow-sm`}>
+            <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">
+                {label}
+            </p>
+
+            <p className={`text-2xl md:text-3xl font-black ${styles[color].text}`}>
+                ৳{value.toLocaleString()}
+            </p>
+        </div>
+    );
+};
 
 const TableRow = ({ memo, isExpanded, onToggle, onCollect, onView, onDelete }) => {
     const due = memo.due_amount || memo.due || 0;
