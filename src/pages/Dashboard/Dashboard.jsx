@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     LayoutDashboard, Package, List, ClipboardList, Menu, X, User, Truck,
     ShoppingBag, Receipt, DollarSign, Users, Warehouse, Wallet, Layers,
@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { useLanguage } from "../../contexts/LanguageContext";
+import axios from "axios";
 
 const translations = {
     en: {
@@ -97,102 +98,221 @@ const Dashboard = () => {
         }
     ];
 
-    const metrics = [
-        { title: t.sales, value: "৳ 125,000", change: "+12.5%", icon: DollarSign, color: "text-blue-600", bg: "bg-blue-100", link: "/sales" },
-        { title: t.customers, value: "348", change: "+8.1%", icon: Users, color: "text-emerald-600", bg: "bg-emerald-100", link: "/customers" },
-        { title: t.suppliers, value: "45", change: "+2.2%", icon: Truck, color: "text-amber-600", bg: "bg-amber-100", link: "/suppliers" },
-        { title: "Due Sales", value: "৳ 45,210", change: "-0.5%", icon: Warehouse, color: "text-rose-600", bg: "bg-rose-100", link: "/sales/daily-due-sales" },
-    ];
+
+    const [dashboardData, setDashboardData] = useState({
+        totalSales: 0,
+        totalPaid: 0,
+        monthlySales: 0,
+        totalCustomers: 0,
+        totalSuppliers: 0,
+        dueSales: 0,
+        loading: true,
+    });
+
+    const BASE_API_URL = import.meta.env.VITE_API_BASE_URL;
+
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+    
+    // console.log("salesRes", salesRes.data, "customersRes", customersRes.data, "suppliersRes", suppliersRes.data);
+
+
+const fetchDashboardData = async () => {
+    try {
+        const [salesRes, customersRes, suppliersRes] = await Promise.all([
+            axios.get(`${BASE_API_URL}/api/sales`),
+            axios.get(`${BASE_API_URL}/api/customers`),
+            axios.get(`${BASE_API_URL}/api/suppliers`)
+        ]);
+
+        const sales = salesRes.data?.data || salesRes.data || [];
+        const customers = customersRes.data?.data || customersRes.data || [];
+        const suppliers = suppliersRes.data?.data || suppliersRes.data || [];
+
+        // Total sales amount
+        const totalSales = sales.reduce(
+            (sum, sale) => sum + Number(sale.total_amount || 0),
+            0
+        );
+
+        // Total due amount
+        const dueSales = sales.reduce(
+            (sum, sale) => sum + Number(sale.due_amount || 0),
+            0
+        );
+
+        // Total paid amount
+        const totalPaid = sales.reduce(
+            (sum, sale) => sum + Number(sale.paid_amount || 0),
+            0
+        );
+
+        // Current month sales
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+
+        const monthlySales = sales
+            .filter((sale) => {
+                const saleDate = new Date(sale.date);
+                return (
+                    saleDate.getMonth() === currentMonth &&
+                    saleDate.getFullYear() === currentYear
+                );
+            })
+            .reduce(
+                (sum, sale) => sum + Number(sale.total_amount || 0),
+                0
+            );
+
+        setDashboardData({
+            totalSales,
+            totalPaid,
+            monthlySales,
+            totalCustomers: customers.length,
+            totalSuppliers: suppliers.length,
+            dueSales,
+            loading: false,
+        });
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+   const metrics = [
+    {
+        title: "Total Sales",
+        value: `৳ ${dashboardData.totalSales?.toLocaleString()}`,
+        icon: DollarSign,
+        color: "text-blue-600",
+        bg: "bg-blue-100",
+        link: "/sales",
+    },
+    {
+        title: "This Month Sales",
+        value: `৳ ${dashboardData.monthlySales?.toLocaleString()}`,
+        icon: ShoppingBag,
+        color: "text-green-600",
+        bg: "bg-green-100",
+        link: "/sales",
+    },
+    {
+        title: t.customers,
+        value: dashboardData.totalCustomers?.toLocaleString(),
+        icon: Users,
+        color: "text-amber-600",
+        bg: "bg-amber-100",
+        link: "/customers",
+    },
+    {
+        title: "Due Sales",
+        value: `৳ ${dashboardData.dueSales?.toLocaleString()}`,
+        icon: Warehouse,
+        color: "text-red-600",
+        bg: "bg-red-100",
+        link: "/sales/daily-due-sales",
+    },
+        {
+        title: t.suppliers,
+        value: dashboardData.totalSuppliers.toLocaleString(),
+        change: "",
+        icon: Truck,
+        color: "text-amber-600",
+        bg: "bg-amber-100",
+        link: "/suppliers",
+    },
+];
 
 
     return (
         <div className=" min-h-screen bg-slate-50">
 
             {/* Main Content Area */}
-           {/* Navbar */}
-                <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-white/80 backdrop-blur-md border-b border-gray-200">
-                    <div className="flex items-center flex-1">
-                        
-                        <div className="relative max-w-md w-full hidden md:block">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input 
-                                type="text" 
-                                placeholder={t.search} 
-                                className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
-                            />
-                        </div>
+            {/* Navbar */}
+            <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-white/80 backdrop-blur-md border-b border-gray-200">
+                <div className="flex items-center flex-1">
+
+                    <div className="relative max-w-md w-full hidden md:block">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder={t.search}
+                            className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
                     </div>
-                </header>
+                </div>
+            </header>
 
-                <main className="p-4 lg:p-8">
-                    {currentPath === "/dashboard" ? (
-                        <div className="max-w-7xl mx-auto space-y-10">
-                            {/* Header Section */}
-                            <div>
-                                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{t.dashboard}</h1>
-                                <p className="text-gray-500 mt-1">{t.welcome}</p>
+            <main className="p-4 lg:p-8">
+                {currentPath === "/dashboard" ? (
+                    <div className="max-w-7xl mx-auto space-y-10">
+                        {/* Header Section */}
+                        <div>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{t.dashboard}</h1>
+                            <p className="text-gray-500 mt-1">{t.welcome}</p>
+                        </div>
+
+                        {/* Metrics Grid */}
+                        <section>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                                {metrics.map((m, idx) => (
+                                    <Link key={idx} to={m.link} className="group bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                                        <div className="flex justify-between items-start">
+                                            <div className={`p-3 rounded-xl ${m.bg} ${m.color}`}>
+                                                <m.icon size={22} />
+                                            </div>
+                                            <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${m.change?.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                {m.change}
+                                            </div>
+                                        </div>
+                                        <div className="mt-4">
+                                            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{m.title}</p>
+                                            <p className="text-2xl font-bold text-gray-900 mt-1">{m.value}</p>
+                                        </div>
+                                    </Link>
+                                ))}
                             </div>
+                        </section>
 
-                            {/* Metrics Grid */}
-                            <section>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                                    {metrics.map((m, idx) => (
-                                        <Link key={idx} to={m.link} className="group bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                                            <div className="flex justify-between items-start">
-                                                <div className={`p-3 rounded-xl ${m.bg} ${m.color}`}>
-                                                    <m.icon size={22} />
-                                                </div>
-                                                <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${m.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                    {m.change}
-                                                </div>
-                                            </div>
-                                            <div className="mt-4">
-                                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{m.title}</p>
-                                                <p className="text-2xl font-bold text-gray-900 mt-1">{m.value}</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </section>
-
-                            {/* Quick Access Grid */}
-                            <section>
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-lg font-bold text-gray-800 flex items-center">
-                                        <span className="w-1 h-6 bg-blue-600 rounded-full mr-3"></span>
-                                        {t.quickNav}
-                                    </h2>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                                    {navigationGroups.flatMap(g => g.items).filter(n => n.href !== "/dashboard").map((item) => (
-                                        <Link
-                                            key={item.href}
-                                            to={item.href}
-                                            className="flex items-center p-4 bg-white border border-gray-100 rounded-xl hover:border-blue-500 hover:shadow-sm transition-all group"
-                                        >
-                                            <div className="p-2 bg-gray-50 rounded-lg text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                                                <item.icon size={20} />
-                                            </div>
-                                            <div className="ml-3">
-                                                <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
-                                                <p className="text-xs text-gray-400">{item.desc}</p>
-                                            </div>
-                                            <ChevronRight className="ml-auto w-4 h-4 text-gray-300 group-hover:text-blue-500" />
-                                        </Link>
-                                    ))}
-                                </div>
-                            </section>
+                        {/* Quick Access Grid */}
+                        <section>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-bold text-gray-800 flex items-center">
+                                    <span className="w-1 h-6 bg-blue-600 rounded-full mr-3"></span>
+                                    {t.quickNav}
+                                </h2>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {navigationGroups.flatMap(g => g.items).filter(n => n.href !== "/dashboard").map((item) => (
+                                    <Link
+                                        key={item.href}
+                                        to={item.href}
+                                        className="flex items-center p-4 bg-white border border-gray-100 rounded-xl hover:border-blue-500 hover:shadow-sm transition-all group"
+                                    >
+                                        <div className="p-2 bg-gray-50 rounded-lg text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                            <item.icon size={20} />
+                                        </div>
+                                        <div className="ml-3">
+                                            <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+                                            <p className="text-xs text-gray-400">{item.desc}</p>
+                                        </div>
+                                        <ChevronRight className="ml-auto w-4 h-4 text-gray-300 group-hover:text-blue-500" />
+                                    </Link>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-2xl p-12 border border-dashed border-gray-300 flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                            <LayoutDashboard className="text-gray-300" />
                         </div>
-                    ) : (
-                        <div className="bg-white rounded-2xl p-12 border border-dashed border-gray-300 flex flex-col items-center justify-center text-center">
-                           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                <LayoutDashboard className="text-gray-300" />
-                           </div>
-                           <h2 className="text-xl font-bold text-gray-800">Module Under Development</h2>
-                           <p className="text-gray-500 mt-2">Content for {location.pathname} is coming soon.</p>
-                        </div>
-                    )}
-                </main>
+                        <h2 className="text-xl font-bold text-gray-800">Module Under Development</h2>
+                        <p className="text-gray-500 mt-2">Content for {location.pathname} is coming soon.</p>
+                    </div>
+                )}
+            </main>
 
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
@@ -200,7 +320,7 @@ const Dashboard = () => {
                     <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
                     <div className="fixed inset-y-0 left-0 w-72 shadow-2xl animate-in slide-in-from-left duration-300">
                         <SidebarContent />
-                        <button 
+                        <button
                             onClick={() => setIsSidebarOpen(false)}
                             className="absolute top-4 right-[-45px] p-2 bg-white rounded-full text-gray-600"
                         >
