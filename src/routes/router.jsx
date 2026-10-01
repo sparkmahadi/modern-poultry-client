@@ -38,6 +38,10 @@ import InventoryDetail from '../pages/Inventory/InventoryDetail';
 import ProductWisePurchases from '../pages/Purchase/ProductWisePurchases';
 import ProductWiseSales from '../pages/Sales/ProductWiseSales';
 import TakeReturn from '../pages/Sales/SalesReturn/TakeReturn';
+import ExpenseThreadDetails from '../pages/Expenses/ExpenseThreadDetails';
+import LendMoney from '../pages/LendMoney/LendMoney';
+import BorrowMoney from '../pages/BorrowMoney/BorrowMoney';
+import DisposeProducts from '../pages/DisposeProducts/DisposeProducts';
 
 const router = createBrowserRouter([
   {
@@ -76,6 +80,8 @@ const router = createBrowserRouter([
           { path: '/payment_accounts/create', element: <CreatePaymentAccount /> },
 
           { path: '/expense-threads', element: <ExpenseThreads /> },
+          { path: "/expense-threads/:id", element: <ExpenseThreadDetails /> },
+          
           { path: '/bills', element: <BillsList /> },
 
           { path: '/sales', element: <SalesManager /> },
@@ -96,6 +102,11 @@ const router = createBrowserRouter([
           { path: '/farm-batches', element: <BatchList /> },
           { path: '/farm-batches/:batchId', element: <BatchDetails /> },
           { path: '/farm-batches/create-batch', element: <CreateBatchForm /> },
+
+          { path: '/lend-money', element: <LendMoney /> },
+          { path: '/borrow-money', element: <BorrowMoney /> },
+          { path: '/dispose-products', element: <DisposeProducts /> },
+
 
           { path: '/reports', element: <ReportsPage /> },
         ],
