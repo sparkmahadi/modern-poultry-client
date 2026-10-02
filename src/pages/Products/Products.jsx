@@ -9,7 +9,6 @@ import {
     ChevronLeft,
     Eye,
     Package,
-    ArrowUpDown,
     ChevronRight
 } from 'lucide-react';
 
@@ -34,7 +33,7 @@ function Products() {
         setLoading(true);
         try {
             const response = await axios.get(`${API_BASE_URL}/api/products`);
-            setProducts(response?.data?.data || []);
+            setProducts(response?.data?.data || response?.data || []);
         } catch (error) {
             toast.error('Failed to load products.');
             setProducts([]);
@@ -46,87 +45,55 @@ function Products() {
     const fetchCategories = async () => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/utilities/categories`);
-            setCategories(response?.data?.data || []);
+            setCategories(response?.data?.data || response?.data || []);
         } catch (error) {
             console.error('Failed to fetch categories');
         }
     };
 
-
-
-    const handleUpdatePrices = async () => {
+    // Save product handler for AddProductModal
+    const handleSaveNewProduct = async (productData) => {
+        setApiInProgress(true);
         try {
-            /* ---------------------------------- */
-            /* 1️⃣ PREVENT MULTIPLE CLICKS */
-            /* ---------------------------------- */
-
-            if (apiInProgress) return;
-
-            setApiInProgress(true);
-
-            console.log(
-                "🚀 Updating all product prices..."
-            );
-
-            /* ---------------------------------- */
-            /* 2️⃣ API CALL */
-            /* ---------------------------------- */
-
-            const response =
-                await axios.patch(
-                    `${API_BASE_URL}/api/products/update-all-products-price`
-                );
-
-            console.log(
-                "✅ API Response:",
-                response.data
-            );
-
-            /* ---------------------------------- */
-            /* 3️⃣ SUCCESS TOAST */
-            /* ---------------------------------- */
-
-            if (response.data.success) {
-                const summary =
-                    response.data.summary;
-
-                toast.success(
-                    `Prices Updated Successfully! 
-Updated: ${summary.updated}
-Skipped: ${summary.skipped}`
-                );
-
-                /* ---------------------------------- */
-                /* 4️⃣ REFRESH PRODUCTS */
-                /* ---------------------------------- */
-
+            const res = await axios.post(`${API_BASE_URL}/api/products`, productData);
+            if (res.data?.success) {
+                toast.success(res.data?.message || 'Product created successfully');
+                setShowAddProductModal(false);
                 await fetchProducts();
             } else {
-                toast.error(
-                    response.data.message ||
-                    "Failed to update prices"
-                );
+                toast.error(res.data?.message || 'Failed to create product');
             }
         } catch (error) {
-            console.error(
-                "❌ Update Prices Error:",
-                error
+            toast.error(error?.response?.data?.message || 'Failed to save product');
+        } finally {
+            setApiInProgress(false);
+        }
+    };
+
+    const handleUpdatePrices = async () => {
+        if (apiInProgress) return;
+        setApiInProgress(true);
+
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/api/products/update-all-products-price`
             );
 
-            /* ---------------------------------- */
-            /* 5️⃣ ERROR HANDLING */
-            /* ---------------------------------- */
-
+            if (response.data?.success) {
+                const summary = response.data.summary || { updated: 0, skipped: 0 };
+                toast.success(
+                    `Prices Updated Successfully!\nUpdated: ${summary.updated}\nSkipped: ${summary.skipped}`
+                );
+                await fetchProducts();
+            } else {
+                toast.error(response.data?.message || 'Failed to update prices');
+            }
+        } catch (error) {
+            console.error('❌ Update Prices Error:', error);
             toast.error(
-                error?.response?.data
-                    ?.message ||
-                "Something went wrong while updating prices"
+                error?.response?.data?.message || 'Something went wrong while updating prices'
             );
         } finally {
-            /* ---------------------------------- */
-            /* 6️⃣ RESET LOADING */
-            /* ---------------------------------- */
-
             setApiInProgress(false);
         }
     };
@@ -136,12 +103,18 @@ Skipped: ${summary.skipped}`
         fetchCategories();
     }, []);
 
-    // Logic: Filter and Search Products
+    // Safe Filter and Search Logic
     const filteredProducts = useMemo(() => {
-        return products.filter(product => {
-            const matchesSearch = product.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                product.id.toString().includes(searchQuery);
-            const matchesCategory = selectedCategory === 'all' || product.category_id.toString() === selectedCategory;
+        const query = searchQuery.trim().toLowerCase();
+
+        return products.filter((product) => {
+            const productId = String(product._id || product.id || '');
+            const itemName = (product.item_name || product.name || '').toLowerCase();
+            const productCatId = String(product.category_id || product.category?._id || product.category || '');
+
+            const matchesSearch = !query || itemName.includes(query) || productId.includes(query);
+            const matchesCategory = selectedCategory === 'all' || productCatId === String(selectedCategory);
+
             return matchesSearch && matchesCategory;
         });
     }, [products, searchQuery, selectedCategory]);
@@ -151,7 +124,6 @@ Skipped: ${summary.skipped}`
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
             <div className="max-w-6xl mx-auto">
-
                 {/* Header Area */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                     <div>
@@ -161,10 +133,11 @@ Skipped: ${summary.skipped}`
                     <div className="flex gap-2">
                         <button
                             onClick={handleUpdatePrices}
-                            className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                            disabled={apiInProgress}
+                            className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
                         >
                             <ChevronRight size={18} />
-                            Update Prices
+                            {apiInProgress ? 'Updating...' : 'Update Prices'}
                         </button>
                         <button
                             onClick={() => navigate('/categories')}
@@ -201,9 +174,14 @@ Skipped: ${summary.skipped}`
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option value="all">All Categories</option>
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
+                            {categories.map((cat) => {
+                                const catId = cat._id || cat.id;
+                                return (
+                                    <option key={catId} value={catId}>
+                                        {cat.name}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
@@ -224,41 +202,48 @@ Skipped: ${summary.skipped}`
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredProducts.length > 0 ? (
-                                    filteredProducts.map((product, idx) => (
-                                        <tr key={product.id} className="hover:bg-blue-50/30 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold text-gray-800">{idx + 1}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold text-gray-800">{product.item_name}</div>
-                                                <div className="text-xs text-gray-400 font-mono">ID: {product.id}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-medium">
-                                                    {categories.find(c => String(c.id) === String(product.category_id))?.name || 'N/A'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                {product.unit}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-semibold text-gray-900">
-                                                    ৳{product.price?.toFixed(2)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => navigate(`/products/${product._id}`)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 text-sm font-medium"
-                                                >
-                                                    <Eye size={16} /> Details
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                    filteredProducts.map((product, idx) => {
+                                        const pId = product._id || product.id;
+                                        const category = categories.find(
+                                            (c) => String(c._id || c.id) === String(product.category_id || product.category?._id || product.category)
+                                        );
+
+                                        return (
+                                            <tr key={pId || idx} className="hover:bg-blue-50/30 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-gray-800">{idx + 1}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-gray-800">{product.item_name || product.name || 'Unnamed Product'}</div>
+                                                    <div className="text-xs text-gray-400 font-mono">ID: {pId}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-medium">
+                                                        {category?.name || product.category_name || 'N/A'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    {product.unit || 'pcs'}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-semibold text-gray-900">
+                                                        ৳{Number(product.price || product.selling_price || 0).toFixed(2)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => navigate(`/products/${pId}`)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 text-sm font-medium"
+                                                    >
+                                                        <Eye size={16} /> Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-400">
+                                        <td colSpan="6" className="px-6 py-12 text-center text-gray-400">
                                             <Package size={40} className="mx-auto mb-2 opacity-20" />
                                             No products match your search.
                                         </td>
@@ -273,7 +258,7 @@ Skipped: ${summary.skipped}`
                     isOpen={showAddProductModal}
                     onClose={() => setShowAddProductModal(false)}
                     categories={categories}
-                    onSave={fetchProducts} // Refresh after add
+                    onSave={handleSaveNewProduct}
                     apiInProgress={apiInProgress}
                 />
             </div>

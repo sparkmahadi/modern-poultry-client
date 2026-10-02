@@ -2,34 +2,45 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import UniversalPaymentModal from '../../components/UniversalPaymentModal';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BillsList = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const passedThreadId = location.state?.expenseThreadId || '';
+  const passedThreadName = location.state?.expenseThreadName || '';
+
   const [threads, setThreads] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [currentBill, setCurrentBill] = useState(null);
-  const navigate = useNavigate();
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [accountList, setAccountList] = useState([]);
 
-  // Filtering states
+  // Filtering states: 'date', 'month', 'year', or 'range'
   const [filterType, setFilterType] = useState('date');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedThreadFilter, setSelectedThreadFilter] = useState('');
+  const [selectedThreadFilter, setSelectedThreadFilter] = useState(passedThreadId);
+
+  // Custom date range state (Between Dates)
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0]
+  });
 
   // Daily Expense Entry Form
   const [formData, setFormData] = useState({
-    expenseThreadId: '',
+    expenseThreadId: selectedThreadFilter || '',
     billName: '',
-    payeeName: '', // Vendor / Person receiving the money
+    payeeName: '',
     amount: '',
     remarks: '',
     billDate: new Date().toISOString().split('T')[0]
@@ -48,19 +59,54 @@ const BillsList = () => {
 
   useEffect(() => {
     fetchBills();
-  }, [filterType, selectedDate, selectedMonth, selectedYear, selectedThreadFilter]);
+  }, [filterType, selectedDate, selectedMonth, selectedYear, selectedThreadFilter, dateRange]);
 
   const fetchBills = async () => {
     try {
       setLoading(true);
       let params = {};
-      if (filterType === 'date') params.date = selectedDate;
-      if (filterType === 'month') params.month = selectedMonth;
-      if (filterType === 'year') params.year = selectedYear;
-      if (selectedThreadFilter) params.expenseThreadId = selectedThreadFilter;
+
+      if (filterType === 'date') {
+        params.date = selectedDate;
+      } else if (filterType === 'month') {
+        params.month = selectedMonth;
+      } else if (filterType === 'year') {
+        params.year = selectedYear;
+      } else if (filterType === 'range') {
+        if (!dateRange.from || !dateRange.to) {
+          setLoading(false);
+          return;
+        }
+        params.from = dateRange.from;
+        params.to = dateRange.to;
+      }
+
+      if (selectedThreadFilter) {
+        params.expenseThreadId = selectedThreadFilter;
+      }
 
       const response = await axios.get(`${API_BASE_URL}/api/bills`, { params });
-      setBills(response.data.data || []);
+      let rawBills = response.data.data || response.data || [];
+
+      // Safe Client-side fallback without timezone clipping
+      if (filterType === 'range' && dateRange.from && dateRange.to) {
+        rawBills = rawBills.filter((b) => {
+          const rawDate = b.createdAt || b.billDate || b.date;
+          if (!rawDate) return false;
+
+          // Convert bill timestamp to standard "YYYY-MM-DD" in local time
+          const billLocalDate = new Date(rawDate).toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD
+          return billLocalDate >= dateRange.from && billLocalDate <= dateRange.to;
+        });
+      }
+
+      if (selectedThreadFilter) {
+        rawBills = rawBills.filter(
+          (b) => (b.expenseThreadId?._id || b.expenseThreadId) === selectedThreadFilter
+        );
+      }
+
+      setBills(rawBills);
     } catch (error) {
       console.error(error);
       toast.error('Failed to load expense vouchers.');
@@ -93,12 +139,14 @@ const BillsList = () => {
 
     if (bill) {
       setFormData({
-        expenseThreadId: bill.expenseThreadId?._id || bill.expenseThreadId || '',
+        expenseThreadId: bill.expenseThreadId?._id || bill.expenseThreadId || selectedThreadFilter || '',
         billName: bill.billName || '',
         payeeName: bill.payeeName || bill.payee || '',
         amount: bill.amount || '',
         remarks: bill.remarks || '',
-        billDate: bill.createdAt ? new Date(bill.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        billDate: bill.createdAt
+          ? new Date(bill.createdAt).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0]
       });
 
       setForm({
@@ -108,7 +156,7 @@ const BillsList = () => {
       });
     } else {
       setFormData({
-        expenseThreadId: '',
+        expenseThreadId: selectedThreadFilter || '',
         billName: '',
         payeeName: '',
         amount: '',
@@ -226,6 +274,7 @@ const BillsList = () => {
               <option value="date">Daily</option>
               <option value="month">Monthly</option>
               <option value="year">Yearly</option>
+              <option value="range">Between Dates (Range)</option>
             </select>
           </div>
 
@@ -253,6 +302,48 @@ const BillsList = () => {
             </div>
           )}
 
+          {filterType === 'year' && (
+            <div className="flex flex-col">
+              <label className="text-[11px] font-bold uppercase text-slate-400 mb-1">Year</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="border border-slate-200 bg-white rounded-xl px-3 py-1.5 text-sm outline-none"
+              >
+                {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 3 + i).map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Custom Date Range (Between Dates) */}
+          {filterType === 'range' && (
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold uppercase text-slate-400 mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={dateRange.from}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
+                  className="border border-slate-200 bg-white rounded-xl px-3 py-1.5 text-sm outline-none"
+                />
+              </div>
+              <span className="text-slate-400 text-xs font-bold mt-5">to</span>
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold uppercase text-slate-400 mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={dateRange.to}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
+                  className="border border-slate-200 bg-white rounded-xl px-3 py-1.5 text-sm outline-none"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Filter by Specific Expense Head */}
           <div className="flex flex-col">
             <label className="text-[11px] font-bold uppercase text-slate-400 mb-1">Expense Head</label>
@@ -273,7 +364,9 @@ const BillsList = () => {
           {/* Total Period Outflow Widget */}
           <div className="ml-auto flex items-center gap-4">
             <div className="bg-white border border-slate-200 px-5 py-2.5 rounded-xl shadow-sm text-right">
-              <span className="text-[11px] text-slate-400 font-bold uppercase block">Total Outflow</span>
+              <span className="text-[11px] text-slate-400 font-bold uppercase block">
+                {filterType === 'range' ? 'Range Outflow' : 'Total Outflow'}
+              </span>
               <span className="text-xl font-bold text-red-600 font-mono">৳{totalExpense.toLocaleString()}</span>
             </div>
           </div>
@@ -348,6 +441,21 @@ const BillsList = () => {
                 ))
               )}
             </tbody>
+
+            {/* Bottom Total Row */}
+            {bills.length > 0 && (
+              <tfoot className="bg-slate-100/80 border-t-2 border-slate-200">
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-sm font-bold text-slate-700 uppercase tracking-wider text-right">
+                    Total Outflow ({filterType === 'range' ? `${dateRange.from} to ${dateRange.to}` : filterType}):
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono font-bold text-red-600 text-lg">
+                    ৳{totalExpense.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4"></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
