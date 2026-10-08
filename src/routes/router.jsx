@@ -37,11 +37,12 @@ import ProtectedRoute from './ProtectedRoute';
 import InventoryDetail from '../pages/Inventory/InventoryDetail';
 import ProductWisePurchases from '../pages/Purchase/ProductWisePurchases';
 import ProductWiseSales from '../pages/Sales/ProductWiseSales';
-import TakeReturn from '../pages/Sales/SalesReturn/TakeReturn';
 import ExpenseThreadDetails from '../pages/Expenses/ExpenseThreadDetails';
 import LendMoney from '../pages/LendMoney/LendMoney';
 import BorrowMoney from '../pages/BorrowMoney/BorrowMoney';
 import DisposeProducts from '../pages/DisposeProducts/DisposeProducts';
+import PurchaseReturn from '../pages/Purchase/PurchaseReturn/PurchaseReturn';
+import PurchaseReturnList from '../pages/Purchase/PurchaseReturn/PurchaseReturnList';
 
 const router = createBrowserRouter([
   {
@@ -90,9 +91,13 @@ const router = createBrowserRouter([
           { path: '/sales/daily-sales', element: <DailySales /> },
           { path: '/sales/sales-reports', element: <SalesReports /> },
           { path: '/sales/create-sale', element: <CreateSell /> },
-          { path: '/sales/sales-return', element: <TakeReturn /> },
 
           { path: '/purchases', element: <PurchaseManager /> },
+
+          { path: '/purchase-returns', element: <PurchaseReturnList   /> },
+          { path: '/purchase-return/:id', element: <PurchaseReturn   /> },
+          { path: '/purchase-return/add', element: <PurchaseReturn   /> },
+
           { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
           { path: '/purchases/product-wise-purchases', element: <ProductWisePurchases /> },
           { path: '/purchases/create', element: <CreatePurchase /> },
