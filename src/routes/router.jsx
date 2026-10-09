@@ -45,6 +45,7 @@ import PurchaseReturn from '../pages/Purchase/PurchaseReturn/PurchaseReturn';
 import PurchaseReturnList from '../pages/Purchase/PurchaseReturn/PurchaseReturnList';
 import SalesReturnList from '../pages/Sales/SalesReturn/SalesReturnList';
 import SalesReturn from '../pages/Sales/SalesReturn/SalesReturn';
+import DailyBusinessReport from '../pages/Reports/DailyBusinessReport';
 
 const router = createBrowserRouter([
   {
@@ -121,6 +122,7 @@ const router = createBrowserRouter([
 
 
           { path: '/reports', element: <ReportsPage /> },
+          { path: '/reports/daily-summary', element: <DailyBusinessReport /> }
         ],
       },
     ],

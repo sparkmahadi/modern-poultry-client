@@ -67,6 +67,7 @@ const NavbarV3 = () => {
     { name: "Dispose Products", icon: ClipboardList, href: "/dispose-products", color: "text-blue-800", bg: "bg-blue-50" },
     { name: "Lend Money", icon: ClipboardList, href: "/lend-money", color: "text-blue-800", bg: "bg-blue-50" },
     { name: "Borrow Money", icon: ClipboardList, href: "/borrow-money", color: "text-blue-800", bg: "bg-blue-50" },
+    { name: "Day Summary", icon: ClipboardList, href: "/reports/daily-summary", color: "text-blue-800", bg: "bg-blue-50" },
   ];
 
   return (
