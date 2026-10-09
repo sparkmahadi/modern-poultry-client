@@ -1,406 +1,865 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import UniversalPaymentModal from '../../components/UniversalPaymentModal';
+import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
+import {
+    ArrowUpRight,
+    Search,
+    Calendar,
+    Download,
+    Plus,
+    X,
+    Eye,
+    Pencil,
+    Trash2,
+    DollarSign,
+    CheckCircle,
+    Clock,
+    User,
+    Phone,
+    MapPin,
+    Printer,
+    FileText
+} from 'lucide-react';
+import PaymentModal from '../Purchase/PaymentModal';
+import TruckLoader from '../../components/Spinner/TruckLoader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const initialLendForm = {
+    borrower_name: "",
+    phone: "",
+    address: "",
+    amount: "",
+    account_id: "",
+    payment_method: "cash",
+    due_date: "",
+    remarks: "",
+    date: ""
+};
+
 const LendMoney = () => {
-  const [loans, setLoans] = useState([]);
-  const [parties, setParties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('disburse'); // 'disburse' (Lend) or 'collect' (Receive repayment)
-  const [selectedLoan, setSelectedLoan] = useState(null);
+    // --- Data State ---
+    const [loans, setLoans] = useState([]);
+    const [accounts, setAccounts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState("");
 
-  // Payment register selection state
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({
-    payment_method: '',
-    account_id: ''
-  });
+    // --- Modal States ---
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [editingLoanId, setEditingLoanId] = useState(null); // null = Create, string = Edit
+    const [showRepaymentModal, setShowRepaymentModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [selectedLoan, setSelectedLoan] = useState(null);
 
-  // Disbursement / Collection Form
-  const [formData, setFormData] = useState({
-    party_id: '',
-    party_name: '',
-    borrower_type: 'CUSTOMER', // CUSTOMER, FARMER, EMPLOYEE
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    expected_return_date: '',
-    purpose: '',
-    remarks: ''
-  });
-
-  useEffect(() => {
-    fetchLoans();
-    fetchParties();
-  }, []);
-
-  const fetchLoans = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/loans/lent`);
-      setLoans(res.data.data || res.data || []);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load lending records');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchParties = async () => {
-    try {
-      // Fetches customers, farmers, and employees
-      const res = await axios.get(`${API_BASE_URL}/api/customers`);
-      setParties(res.data.data || res.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const openDisburseModal = () => {
-    setModalMode('disburse');
-    setSelectedLoan(null);
-    setFormData({
-      party_id: '',
-      party_name: '',
-      borrower_type: 'CUSTOMER',
-      amount: '',
-      date: new Date().toISOString().split('T')[0],
-      expected_return_date: '',
-      purpose: '',
-      remarks: ''
+    // --- Forms ---
+    const [lendForm, setLendForm] = useState(initialLendForm);
+    const [repayForm, setRepayForm] = useState({
+        amount: "",
+        account_id: "",
+        payment_method: "cash",
+        notes: "",
+        date: ""
     });
-    setPaymentForm({ payment_method: '', account_id: '' });
-    setShowModal(true);
-  };
 
-  const openCollectModal = (loan) => {
-    setModalMode('collect');
-    setSelectedLoan(loan);
-    const remainingBalance = (Number(loan.principal) || 0) - (Number(loan.recovered_amount) || 0);
+    const [showPaymentModalForCreate, setShowPaymentModalForCreate] = useState(false);
+    const [showPaymentModalForRepay, setShowPaymentModalForRepay] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    setFormData({
-      party_id: loan.party_id,
-      party_name: loan.party_name,
-      borrower_type: loan.borrower_type,
-      amount: remainingBalance > 0 ? remainingBalance : '',
-      date: new Date().toISOString().split('T')[0],
-      expected_return_date: '',
-      purpose: 'Loan Recovery / Repayment',
-      remarks: ''
-    });
-    setPaymentForm({ payment_method: '', account_id: '' });
-    setShowModal(true);
-  };
+    // Initial Data Fetch
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [loanRes, accRes] = await Promise.all([
+                axios.get(`${API_BASE_URL}/api/lend-money`),
+                axios.get(`${API_BASE_URL}/api/payment_accounts`)
+            ]);
+            setLoans(loanRes.data?.data || []);
+            setAccounts(accRes.data?.data || []);
+        } catch (err) {
+            console.error("Failed to load lend records:", err);
+            toast.error("Failed to load records.");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-  const handlePaymentSelect = ({ paymentMethod, accountId }) => {
-    setPaymentForm({
-      payment_method: paymentMethod,
-      account_id: accountId
-    });
-  };
+    useEffect(() => {
+        fetchData();
+        const now = new Date();
+        const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        setLendForm((prev) => ({ ...prev, date: local }));
+        setRepayForm((prev) => ({ ...prev, date: local }));
+    }, [fetchData]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    // Active Account Helpers
+    const selectedCreateAccountObj = useMemo(() => {
+        return accounts.find((a) => a._id === lendForm.account_id);
+    }, [accounts, lendForm.account_id]);
 
-    if (!paymentForm.account_id) {
-      return toast.warn('Please choose an account for this cash flow');
-    }
+    const selectedRepayAccountObj = useMemo(() => {
+        return accounts.find((a) => a._id === repayForm.account_id);
+    }, [accounts, repayForm.account_id]);
 
-    const payload = {
-      ...formData,
-      amount: Number(formData.amount),
-      account_id: paymentForm.account_id,
-      payment_method: paymentForm.payment_method
+    // Summary Statistics
+    const stats = useMemo(() => {
+        const totalLent = loans.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+        const totalRepaid = loans.reduce((sum, l) => sum + Number(l.repaid_amount || 0), 0);
+        const totalReceivable = loans.reduce((sum, l) => sum + Number(l.due_amount || 0), 0);
+        return { totalLent, totalRepaid, totalReceivable };
+    }, [loans]);
+
+    // Search and Filter
+    const filteredLoans = useMemo(() => {
+        return loans.filter((l) => {
+            const matchesFilter =
+                filter === 'all'
+                    ? true
+                    : filter === 'unpaid'
+                    ? l.status !== 'repaid'
+                    : l.status === 'repaid';
+
+            const query = searchQuery.toLowerCase().trim();
+            const matchesQuery =
+                !query ||
+                (l.borrower_name && l.borrower_name.toLowerCase().includes(query)) ||
+                (l.phone && l.phone.includes(query)) ||
+                (l.remarks && l.remarks.toLowerCase().includes(query));
+
+            return matchesFilter && matchesQuery;
+        });
+    }, [loans, filter, searchQuery]);
+
+    // Open Edit Modal & Populate Form
+    const handleOpenEdit = (loan) => {
+        setEditingLoanId(loan._id);
+        const formattedDate = loan.date
+            ? new Date(new Date(loan.date).getTime() - new Date(loan.date).getTimezoneOffset() * 60000)
+                  .toISOString()
+                  .slice(0, 16)
+            : "";
+        const formattedDueDate = loan.due_date
+            ? format(new Date(loan.due_date), "yyyy-MM-dd")
+            : "";
+
+        setLendForm({
+            borrower_name: loan.borrower_name || "",
+            phone: loan.phone || "",
+            address: loan.address || "",
+            amount: loan.amount || "",
+            account_id: loan.account_id?._id || loan.account_id || "",
+            payment_method: loan.payment_method || "cash",
+            due_date: formattedDueDate,
+            remarks: loan.remarks || "",
+            date: formattedDate
+        });
+        setShowCreateModal(true);
     };
 
-    try {
-      if (modalMode === 'disburse') {
-        // Disburse loan (Debits register, records receivable asset)
-        await axios.post(`${API_BASE_URL}/api/loans/lend`, payload);
-        toast.success('Loan disbursed successfully!');
-      } else {
-        // Collect recovery (Credits register, decreases receivable)
-        await axios.post(`${API_BASE_URL}/api/loans/lent/${selectedLoan._id}/collect`, payload);
-        toast.success('Repayment collected successfully!');
-      }
-      setShowModal(false);
-      fetchLoans();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Transaction failed');
-    }
-  };
+    // Open Fresh Create Modal
+    const handleOpenCreate = () => {
+        setEditingLoanId(null);
+        const now = new Date();
+        const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        setLendForm({
+            ...initialLendForm,
+            date: local
+        });
+        setShowCreateModal(true);
+    };
 
-  // Metrics
-  const totalPrincipalLent = useMemo(
-    () => loans.reduce((acc, curr) => acc + (Number(curr.principal) || 0), 0),
-    [loans]
-  );
-  const totalRecovered = useMemo(
-    () => loans.reduce((acc, curr) => acc + (Number(curr.recovered_amount) || 0), 0),
-    [loans]
-  );
-  const totalOutstanding = Math.max(0, totalPrincipalLent - totalRecovered);
+    // --- Create / Update Loan Submit ---
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
 
-  return (
-    <div className="p-8 max-w-7xl mx-auto bg-slate-50 min-h-screen">
-      {/* Top Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-light text-slate-900 tracking-tight">
-            Money <span className="font-bold">Lending & Receivables</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Track loans extended to dealers, farmers, and staff, along with collection history
-          </p>
-        </div>
-        <button
-          onClick={openDisburseModal}
-          className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-black transition shadow-md"
-        >
-          + Disburse Loan
-        </button>
-      </div>
+        if (!lendForm.borrower_name.trim()) return toast.warning("Recipient name is required");
+        if (!lendForm.amount || Number(lendForm.amount) <= 0) return toast.warning("Valid amount is required");
+        if (!lendForm.account_id) return toast.warning("Please select a payment account");
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Disbursed</span>
-          <p className="text-2xl font-bold text-slate-900 font-mono mt-1">৳{totalPrincipalLent.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Recovered Back</span>
-          <p className="text-2xl font-bold text-emerald-600 font-mono mt-1">৳{totalRecovered.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Net Outstanding Claim</span>
-          <p className="text-2xl font-bold text-red-600 font-mono mt-1">৳{totalOutstanding.toLocaleString()}</p>
-        </div>
-      </div>
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                ...lendForm,
+                amount: Number(lendForm.amount)
+            };
 
-      {/* Loans Ledger Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-100">
-              <th className="px-6 py-4">SL</th>
-              <th className="px-6 py-4">Borrower</th>
-              <th className="px-6 py-4">Disbursed Date</th>
-              <th className="px-6 py-4 text-right">Principal</th>
-              <th className="px-6 py-4 text-right">Recovered</th>
-              <th className="px-6 py-4 text-right">Remaining Due</th>
-              <th className="px-6 py-4">Due Date</th>
-              <th className="px-6 py-4 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan="8" className="p-8 text-center text-slate-400 text-sm">
-                  Loading loan ledgers...
-                </td>
-              </tr>
-            ) : loans.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="p-8 text-center text-slate-400 text-sm">
-                  No money has been lent out yet.
-                </td>
-              </tr>
-            ) : (
-              loans.map((loan, index) => {
-                const rem = (Number(loan.principal) || 0) - (Number(loan.recovered_amount) || 0);
-                const isSettled = rem <= 0;
+            if (editingLoanId) {
+                // Update
+                const res = await axios.put(`${API_BASE_URL}/api/lend-money/${editingLoanId}`, payload);
+                if (res.data?.success) {
+                    toast.success(res.data.message || "Loan record updated successfully!");
+                    setShowCreateModal(false);
+                    setEditingLoanId(null);
+                    fetchData();
+                }
+            } else {
+                // Create
+                const res = await axios.post(`${API_BASE_URL}/api/lend-money`, payload);
+                if (res.data?.success) {
+                    toast.success(res.data.message || "Loan recorded successfully!");
+                    setShowCreateModal(false);
+                    fetchData();
+                }
+            }
+        } catch (err) {
+            console.error("Save failed:", err);
+            toast.error(err.response?.data?.message || "Failed to save loan record.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-                return (
-                  <tr key={loan._id || index} className="hover:bg-slate-50/70 transition">
-                    <td className="px-6 py-4 text-slate-400 text-sm">{index + 1}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">
-                      {loan.party_name}
-                      <span className="block text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                        {loan.borrower_type || 'Party'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {loan.date ? new Date(loan.date).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-medium text-slate-800">
-                      ৳{Number(loan.principal).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-emerald-600">
-                      ৳{Number(loan.recovered_amount || 0).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-bold text-red-600">
-                      ৳{rem.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">
-                      {loan.expected_return_date ? new Date(loan.expected_return_date).toLocaleDateString() : 'Open'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {isSettled ? (
-                        <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 rounded-lg">
-                          Settled
+    // --- Repayment Submit ---
+    const handleRepaySubmit = async (e) => {
+        e.preventDefault();
+
+        if (!repayForm.amount || Number(repayForm.amount) <= 0) return toast.warning("Valid amount is required");
+        if (!repayForm.account_id) return toast.warning("Please select a receiving account");
+
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                ...repayForm,
+                amount: Number(repayForm.amount)
+            };
+            const res = await axios.post(`${API_BASE_URL}/api/lend-money/${selectedLoan._id}/repay`, payload);
+            if (res.data?.success) {
+                toast.success(res.data.message || "Repayment recorded!");
+                setShowRepaymentModal(false);
+                setRepayForm({ amount: "", account_id: "", payment_method: "cash", notes: "", date: "" });
+                fetchData();
+            }
+        } catch (err) {
+            console.error("Repayment failed:", err);
+            toast.error(err.response?.data?.message || "Repayment failed.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // --- Delete / Cancel Loan ---
+    const handleDelete = async (id) => {
+        if (!window.confirm("Cancel this loan record? This will revert the original disbursed funds back into the payment account.")) {
+            return;
+        }
+
+        try {
+            const res = await axios.delete(`${API_BASE_URL}/api/lend-money/${id}`);
+            if (res.data?.success) {
+                toast.success(res.data.message || "Loan record cancelled successfully");
+                setLoans((prev) => prev.filter((l) => l._id !== id));
+            }
+        } catch (err) {
+            console.error("Delete failed:", err);
+            toast.error(err.response?.data?.message || "Failed to delete loan.");
+        }
+    };
+
+    // Excel Export
+    const handleExportExcel = () => {
+        const data = loans.map((l) => ({
+            Date: l.date ? format(new Date(l.date), "yyyy-MM-dd") : "N/A",
+            Borrower: l.borrower_name,
+            Phone: l.phone || "N/A",
+            Address: l.address || "N/A",
+            AmountLent: l.amount || 0,
+            RepaidAmount: l.repaid_amount || 0,
+            OutstandingDue: l.due_amount || 0,
+            Status: l.status,
+            Account: l.account_name || "N/A",
+            DueDate: l.due_date ? format(new Date(l.due_date), "yyyy-MM-dd") : "N/A",
+            Remarks: l.remarks || ""
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "LendMoney");
+        XLSX.writeFile(wb, `Loans_Lent_${format(new Date(), "yyyyMMdd")}.xlsx`);
+    };
+
+    if (loading) return <TruckLoader />;
+
+    return (
+        <div className="container mx-auto p-6 max-w-7xl font-sans text-slate-700">
+            {/* Top Bar */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <span className="p-2 bg-teal-100 text-teal-700 rounded-xl">
+                            <ArrowUpRight className="w-6 h-6" />
                         </span>
-                      ) : (
-                        <button
-                          onClick={() => openCollectModal(loan)}
-                          className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
-                        >
-                          Receive Payment
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                        Lend Money (Loans & Advances)
+                    </h1>
+                    <p className="text-slate-500 text-sm mt-1">
+                        Track loans and operational cash advances given out to individuals or staff
+                    </p>
+                </div>
 
-      {/* Modal: Lend or Collect */}
-      {showModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-7 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-slate-800 mb-5">
-              {modalMode === 'disburse' ? 'Disburse Loan (Lend Money)' : `Collect Repayment from ${formData.party_name}`}
-            </h3>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {modalMode === 'disburse' && (
-                <>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Select Borrower</label>
-                    <select
-                      required
-                      value={formData.party_id}
-                      onChange={(e) => {
-                        const party = parties.find((p) => p._id === e.target.value);
-                        setFormData({
-                          ...formData,
-                          party_id: e.target.value,
-                          party_name: party?.name || '',
-                          borrower_type: party?.customer_type || 'CUSTOMER'
-                        });
-                      }}
-                      className="w-full mt-1 px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900 text-sm"
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition shadow-sm text-sm"
                     >
-                      <option value="">-- Choose Party --</option>
-                      {parties.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} ({p.customer_type || 'Customer'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                        <Download className="w-4 h-4" /> Export Excel
+                    </button>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Disbursement Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 border rounded-xl outline-none text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Expected Repayment Date</label>
-                      <input
-                        type="date"
-                        value={formData.expected_return_date}
-                        onChange={(e) => setFormData({ ...formData, expected_return_date: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 border rounded-xl outline-none text-sm"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  {modalMode === 'disburse' ? 'Loan Principal (৳)' : 'Repayment Amount (৳)'}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  placeholder="0.00"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full mt-1 px-4 py-2 border rounded-xl outline-none font-mono font-bold text-slate-900 text-lg"
-                />
-              </div>
-
-              {/* Source/Destination Account Section */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    {modalMode === 'disburse' ? 'Cash Disbursed Out From' : 'Deposited Into Account'}
-                  </label>
-                  {!paymentForm.account_id && (
-                    <span className="text-[10px] text-amber-600 font-bold uppercase">Required</span>
-                  )}
+                    <button
+                        onClick={handleOpenCreate}
+                        className="flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-teal-700 transition text-sm"
+                    >
+                        <Plus className="w-4 h-4" /> Disburse New Loan
+                    </button>
                 </div>
-                <div className="flex items-center justify-between mt-1">
-                  <div>
-                    <span className="text-sm font-semibold capitalize text-slate-800 block">
-                      {paymentForm.payment_method || 'No Account Selected'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(true)}
-                    className="text-xs bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg transition"
-                  >
-                    {paymentForm.account_id ? 'Change Account' : 'Choose Account'}
-                  </button>
+            </div>
+
+            {/* Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl border-l-4 border-teal-500 shadow-sm border border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Principal Lent</p>
+                    <p className="text-2xl font-black text-slate-900 mt-1">
+                        ৳{stats.totalLent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
                 </div>
-              </div>
+                <div className="bg-white p-6 rounded-2xl border-l-4 border-emerald-500 shadow-sm border border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Repaid Back</p>
+                    <p className="text-2xl font-black text-emerald-600 mt-1">
+                        ৳{stats.totalRepaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border-l-4 border-rose-500 shadow-sm border border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Outstanding Receivable Due</p>
+                    <p className="text-2xl font-black text-rose-600 mt-1">
+                        ৳{stats.totalReceivable.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                </div>
+            </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">Purpose / Remarks</label>
-                <textarea
-                  value={formData.remarks}
-                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                  placeholder="e.g. Emergency farm repair advance"
-                  className="w-full mt-1 px-4 py-2 border rounded-xl outline-none h-18 resize-none text-sm"
-                />
-              </div>
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
+                <div className="flex bg-slate-100 p-1 rounded-xl w-fit border border-slate-200">
+                    {[
+                        { id: 'all', label: 'All Records' },
+                        { id: 'unpaid', label: 'Pending Due' },
+                        { id: 'repaid', label: 'Fully Repaid' }
+                    ].map((t) => (
+                        <button
+                            key={t.id}
+                            onClick={() => setFilter(t.id)}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
+                                filter === t.id
+                                    ? 'bg-white text-teal-700 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
 
-              <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2 text-slate-500 hover:text-slate-700 text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-slate-900 hover:bg-black text-white px-6 py-2 rounded-xl text-sm font-semibold shadow-md transition"
-                >
-                  {modalMode === 'disburse' ? 'Confirm Disbursement' : 'Confirm Collection'}
-                </button>
-              </div>
-            </form>
-          </div>
+                <div className="relative w-full sm:w-72">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search borrower or phone..."
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+                </div>
+            </div>
+
+            {/* Loans Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">SL</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Borrower</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Disbursed From</th>
+                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Principal (৳)</th>
+                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Repaid (৳)</th>
+                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Balance Due</th>
+                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredLoans.map((l, idx) => {
+                                const isFullyPaid = l.due_amount <= 0;
+                                return (
+                                    <tr key={l._id} className="hover:bg-slate-50/70 transition-colors">
+                                        <td className="px-6 py-4 text-sm font-bold text-slate-400">{idx + 1}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-slate-800">
+                                            {l.date ? format(new Date(l.date), "dd MMM yyyy") : "-"}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                            {l.borrower_name}
+                                            {l.phone && <span className="text-xs text-slate-400 block font-normal">{l.phone}</span>}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-slate-600">
+                                            {l.account_name || l.payment_method?.toUpperCase()}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">
+                                            ৳{Number(l.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-right font-semibold text-emerald-600">
+                                            ৳{Number(l.repaid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-right font-bold text-rose-600">
+                                            ৳{Number(l.due_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                                                isFullyPaid
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : l.repaid_amount > 0
+                                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                            }`}>
+                                                {isFullyPaid ? 'Settled' : l.repaid_amount > 0 ? 'Partial' : 'Pending'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center space-x-2 whitespace-nowrap">
+                                            {!isFullyPaid && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedLoan(l);
+                                                        setRepayForm((prev) => ({
+                                                            ...prev,
+                                                            amount: l.due_amount,
+                                                            account_id: l.account_id?._id || l.account_id
+                                                        }));
+                                                        setShowRepaymentModal(true);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition"
+                                                >
+                                                    <DollarSign className="w-3.5 h-3.5" /> Return
+                                                </button>
+                                            )}
+
+                                            {/* Edit Button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenEdit(l)}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition"
+                                                title="Edit Loan Details"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" /> Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedLoan(l);
+                                                    setShowDetailsModal(true);
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                                            >
+                                                <Eye className="w-3.5 h-3.5 text-slate-400" /> Voucher
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(l._id)}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition"
+                                                title="Cancel & Revert Loan"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredLoans.length === 0 && (
+                    <div className="p-16 text-center text-slate-400 font-medium italic">
+                        No lending records found.
+                    </div>
+                )}
+            </div>
+
+            {/* --- MODAL: CREATE & EDIT LEND RECORD --- */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+                        <div className="bg-slate-900 text-white px-8 py-5 flex justify-between items-center">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <ArrowUpRight className="w-5 h-5 text-teal-400" />
+                                {editingLoanId ? "Edit Loan Record" : "Disburse Cash Advance / Loan"}
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowCreateModal(false)}
+                                className="p-1.5 text-slate-400 hover:text-white rounded-lg transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleFormSubmit} className="p-8 overflow-y-auto space-y-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Recipient / Borrower Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={lendForm.borrower_name}
+                                    onChange={(e) => setLendForm({ ...lendForm, borrower_name: e.target.value })}
+                                    placeholder="e.g. Rahim Ali / Farm Staff"
+                                    className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                        Phone Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={lendForm.phone}
+                                        onChange={(e) => setLendForm({ ...lendForm, phone: e.target.value })}
+                                        placeholder="017xxxxxxxx"
+                                        className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                        Disbursement Date
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={lendForm.date}
+                                        onChange={(e) => setLendForm({ ...lendForm, date: e.target.value })}
+                                        className="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                        Principal Amount (৳) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        step="any"
+                                        value={lendForm.amount}
+                                        onChange={(e) => setLendForm({ ...lendForm, amount: e.target.value })}
+                                        placeholder="0.00"
+                                        className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-base font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                        Expected Return Date (Optional)
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={lendForm.due_date}
+                                        onChange={(e) => setLendForm({ ...lendForm, due_date: e.target.value })}
+                                        className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Disbursing Account Selector */}
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Disbursed From Account <span className="text-red-500">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPaymentModalForCreate(true)}
+                                    className="w-full py-2.5 px-4 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 hover:bg-slate-100 transition flex justify-between items-center"
+                                >
+                                    <span className="text-xs uppercase text-slate-500 font-bold">Selected</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {selectedCreateAccountObj
+                                            ? `${selectedCreateAccountObj.name} (${selectedCreateAccountObj.type.toUpperCase()}) - ৳${selectedCreateAccountObj.balance}`
+                                            : 'Select Account'}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Remarks / Loan Purpose
+                                </label>
+                                <textarea
+                                    rows="2"
+                                    value={lendForm.remarks}
+                                    onChange={(e) => setLendForm({ ...lendForm, remarks: e.target.value })}
+                                    placeholder="Purpose of advance or repayment conditions..."
+                                    className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                />
+                            </div>
+
+                            <div className="pt-4 border-t flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="px-5 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !lendForm.borrower_name || !lendForm.amount || !lendForm.account_id}
+                                    className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-sm shadow-md transition disabled:bg-slate-300"
+                                >
+                                    {isSubmitting ? "Saving..." : editingLoanId ? "Update Loan" : "Confirm & Disburse"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL 2: RECEIVE REPAYMENT --- */}
+            {showRepaymentModal && selectedLoan && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+                        <div className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-emerald-400" /> Record Loan Return
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowRepaymentModal(false)}
+                                className="text-slate-400 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleRepaySubmit} className="p-6 space-y-4">
+                            <div className="bg-slate-50 p-3.5 rounded-xl border text-sm">
+                                <p className="text-slate-500">Recipient: <b className="text-slate-900">{selectedLoan.borrower_name}</b></p>
+                                <p className="text-slate-500 mt-1">Outstanding Balance: <b className="text-rose-600">৳{selectedLoan.due_amount}</b></p>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Repayment Amount (৳) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    required
+                                    min="1"
+                                    max={selectedLoan.due_amount}
+                                    step="any"
+                                    value={repayForm.amount}
+                                    onChange={(e) => setRepayForm({ ...repayForm, amount: e.target.value })}
+                                    className="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 text-lg font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Deposit Into Account <span className="text-red-500">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPaymentModalForRepay(true)}
+                                    className="w-full py-2.5 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 hover:bg-slate-100 transition flex justify-between items-center"
+                                >
+                                    <span className="text-xs uppercase text-slate-500 font-bold">Selected</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {selectedRepayAccountObj
+                                            ? `${selectedRepayAccountObj.name} (${selectedRepayAccountObj.type.toUpperCase()})`
+                                            : 'Select Account'}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Notes
+                                </label>
+                                <input
+                                    type="text"
+                                    value={repayForm.notes}
+                                    onChange={(e) => setRepayForm({ ...repayForm, notes: e.target.value })}
+                                    placeholder="Voucher ref or cash memo notes..."
+                                    className="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                            </div>
+
+                            <div className="pt-3 border-t flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRepaymentModal(false)}
+                                    className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-bold text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !repayForm.amount || !repayForm.account_id}
+                                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow transition disabled:bg-slate-300"
+                                >
+                                    {isSubmitting ? "Crediting..." : "Confirm Return"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL 3: VOUCHER / AUDIT TRAIL --- */}
+            {showDetailsModal && selectedLoan && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-100">
+                        <div className="bg-slate-900 text-white px-8 py-5 flex justify-between items-center no-print">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-teal-400" /> Loan Voucher #{String(selectedLoan._id).slice(-8)}
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    className="p-2 text-slate-300 hover:text-white rounded-lg transition"
+                                >
+                                    <Printer className="w-5 h-5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDetailsModal(false)}
+                                    className="p-2 text-slate-300 hover:text-white rounded-lg transition"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-8 space-y-6 overflow-y-auto print:p-0 text-sm">
+                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <div>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">Borrower / Staff</span>
+                                    <p className="font-bold text-slate-900 text-base">{selectedLoan.borrower_name}</p>
+                                    {selectedLoan.phone && <p className="text-xs text-slate-500 mt-1">Phone: {selectedLoan.phone}</p>}
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs font-bold text-slate-400 uppercase">Disbursement Date</span>
+                                    <p className="font-bold text-slate-900">
+                                        {selectedLoan.date ? format(new Date(selectedLoan.date), "dd MMMM yyyy") : "N/A"}
+                                    </p>
+                                    {selectedLoan.due_date && (
+                                        <p className="text-xs text-rose-600 mt-1">Due Date: {format(new Date(selectedLoan.due_date), "dd MMM yyyy")}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4 text-center bg-teal-50/50 p-4 rounded-xl border border-teal-100">
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase">Principal</p>
+                                    <p className="text-lg font-bold text-slate-900">৳{selectedLoan.amount}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase">Repaid</p>
+                                    <p className="text-lg font-bold text-emerald-600">৳{selectedLoan.repaid_amount || 0}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase">Balance Due</p>
+                                    <p className="text-lg font-bold text-rose-600">৳{selectedLoan.due_amount}</p>
+                                </div>
+                            </div>
+
+                            {/* Repayment History Ledger */}
+                            <div>
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                    Repayment History ({selectedLoan.repayment_history?.length || 0})
+                                </h3>
+                                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                                            <tr>
+                                                <th className="p-3">Date</th>
+                                                <th className="p-3 text-right">Amount (৳)</th>
+                                                <th className="p-3">Method</th>
+                                                <th className="p-3">Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {(!selectedLoan.repayment_history || selectedLoan.repayment_history.length === 0) ? (
+                                                <tr>
+                                                    <td colSpan="4" className="p-4 text-center text-slate-400 italic">No repayments recorded yet.</td>
+                                                </tr>
+                                            ) : (
+                                                selectedLoan.repayment_history.map((rh, i) => (
+                                                    <tr key={i}>
+                                                        <td className="p-3">{rh.date ? format(new Date(rh.date), "dd MMM yyyy") : "-"}</td>
+                                                        <td className="p-3 text-right font-bold text-emerald-600">৳{rh.amount}</td>
+                                                        <td className="p-3 uppercase text-xs">{rh.payment_method || "cash"}</td>
+                                                        <td className="p-3 text-slate-500 text-xs">{rh.notes || "—"}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {selectedLoan.remarks && (
+                                <div className="bg-slate-50 p-3.5 rounded-xl border text-xs text-slate-600">
+                                    <b>Remarks:</b> {selectedLoan.remarks}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-end gap-3 no-print">
+                            <button
+                                type="button"
+                                onClick={() => setShowDetailsModal(false)}
+                                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Modal for Disbursal */}
+            <PaymentModal
+                isOpen={showPaymentModalForCreate}
+                onClose={() => setShowPaymentModalForCreate(false)}
+                onSelectPayment={({ paymentMethod, accountId }) => {
+                    setLendForm((prev) => ({ ...prev, payment_method: paymentMethod, account_id: accountId }));
+                }}
+                defaultPaymentMethod={lendForm.payment_method}
+                defaultSelectedAccount={lendForm.account_id}
+            />
+
+            {/* Payment Modal for Repayment */}
+            <PaymentModal
+                isOpen={showPaymentModalForRepay}
+                onClose={() => setShowPaymentModalForRepay(false)}
+                onSelectPayment={({ paymentMethod, accountId }) => {
+                    setRepayForm((prev) => ({ ...prev, payment_method: paymentMethod, account_id: accountId }));
+                }}
+                defaultPaymentMethod={repayForm.payment_method}
+                defaultSelectedAccount={repayForm.account_id}
+            />
         </div>
-      )}
-
-      {/* Reusable Multi-Register Picker */}
-      <UniversalPaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onSelectPayment={handlePaymentSelect}
-        defaultPaymentMethod={paymentForm.payment_method}
-        defaultSelectedAccount={paymentForm.account_id}
-      />
-    </div>
-  );
+    );
 };
 
 export default LendMoney;

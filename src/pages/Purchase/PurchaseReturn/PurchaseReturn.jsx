@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Calendar, Trash2, CreditCard, Search, MapPin, Phone, X, RotateCcw, ArrowLeft, Printer } from 'lucide-react';
+import { Calendar, Trash2, CreditCard, Search, MapPin, Phone, X, RotateCcw, ArrowLeft, Printer, CheckCircle } from 'lucide-react';
 import PaymentModal from '../PaymentModal';
 import TruckLoader from '../../../components/Spinner/TruckLoader';
 
@@ -61,7 +61,7 @@ const PurchaseReturn = () => {
     const supplierRef = useRef(null);
     const productRef = useRef(null);
 
-    // --- Initialize Accounts & Time ---
+    // Fetch accounts and set current local time on mount
     useEffect(() => {
         if (!isEditMode) {
             const now = new Date();
@@ -82,7 +82,7 @@ const PurchaseReturn = () => {
         fetchAccounts();
     }, [isEditMode]);
 
-    // --- Fetch Existing Return Record when `:id` is present ---
+    // Fetch existing record when in :id mode
     useEffect(() => {
         if (!isEditMode) return;
 
@@ -101,9 +101,9 @@ const PurchaseReturn = () => {
                     due: Number(data.due || 0),
                     advance: Number(data.advance || 0),
                     supplierId: data.supplier_id?._id || data.supplier_id || null,
-                    refund_received: Number(data.refund_received || 0),
+                    refund_received: Number(data.refund_received || data.refund_amount || 0),
                     payment_method: data.payment_method || "",
-                    account_id: data.account_id || "",
+                    account_id: data.account_id?._id || data.account_id || "",
                     note: data.note || ""
                 });
 
@@ -137,7 +137,7 @@ const PurchaseReturn = () => {
         fetchReturnRecord();
     }, [id, isEditMode, navigate]);
 
-    // --- Outside Click Detection ---
+    // Outside click detection
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (supplierRef.current && !supplierRef.current.contains(event.target)) {
@@ -151,7 +151,7 @@ const PurchaseReturn = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // --- Debounced Supplier Search ---
+    // Debounced supplier search
     useEffect(() => {
         if (isEditMode) return;
 
@@ -196,7 +196,7 @@ const PurchaseReturn = () => {
         setShowSupplierResults(false);
     };
 
-    // --- Product Search ---
+    // Product search handlers
     const handleProductSearch = async (e) => {
         const query = e.target.value;
         setProductSearch(query);
@@ -256,7 +256,7 @@ const PurchaseReturn = () => {
         setProducts((prev) => prev.filter((_, i) => i !== index));
     };
 
-    // --- Calculations ---
+    // Calculations
     const totalReturn = useMemo(() => {
         return products.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.purchase_price || 0)), 0);
     }, [products]);
@@ -267,24 +267,54 @@ const PurchaseReturn = () => {
         return Math.max(0, currentDue - totalReturn + refund);
     }, [form.due, totalReturn, form.refund_received]);
 
+    // Active selected account object
+    const selectedAccountObj = useMemo(() => {
+        return accountList.find((a) => a._id === form.account_id);
+    }, [accountList, form.account_id]);
+
+    // Account selector with auto-fill of refund amount
     const handlePaymentSelect = ({ paymentMethod, accountId }) => {
         setForm((prev) => ({
             ...prev,
             payment_method: paymentMethod,
-            account_id: accountId
+            account_id: accountId,
+            // Automatically default to total return value if refund was 0
+            refund_received: Number(prev.refund_received) > 0 ? prev.refund_received : totalReturn
         }));
     };
 
-    // --- Form Submit ---
+    const resetForm = () => {
+        setForm(initialFormState);
+        setProducts([]);
+        setSupplierSearchQuery("");
+        setSupplierSearchResults([]);
+        setProductSearch("");
+        setSearchResults([]);
+    };
+
+    // Submission
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!form.supplierId) return toast.warning("Please search and select a supplier.");
         if (products.length === 0) return toast.warning("Add at least one product to return.");
 
-        if (Number(form.refund_received) > 0) {
+        let finalRefund = Number(form.refund_received) || 0;
+
+        // Prevent accidental zero-refund submissions when an account was selected
+        if (form.account_id && finalRefund <= 0) {
+            const confirmFull = window.confirm(
+                `You selected the account "${selectedAccountObj?.name || form.payment_method?.toUpperCase()}", but Refund Received is ৳0.\n\nDo you want to deposit the full return amount of ৳${totalReturn} into this account?`
+            );
+            if (confirmFull) {
+                finalRefund = totalReturn;
+                setForm((prev) => ({ ...prev, refund_received: totalReturn }));
+            }
+        }
+
+        if (finalRefund > 0) {
             if (!form.payment_method) return toast.warning("Select refund payment method.");
-            if (!form.account_id) return toast.warning("Select refund receiving account.");
+            if (!form.account_id) return toast.warning("Select account to deposit refund.");
         }
 
         setIsSubmitting(true);
@@ -293,9 +323,9 @@ const PurchaseReturn = () => {
                 supplier_id: form.supplierId,
                 date: new Date(dateTime).toISOString(),
                 total_return_amount: totalReturn,
-                refund_received: Number(form.refund_received) || 0,
-                payment_method: form.payment_method || null,
-                account_id: form.account_id || null,
+                refund_received: finalRefund,
+                payment_method: finalRefund > 0 ? form.payment_method : null,
+                account_id: finalRefund > 0 ? form.account_id : null,
                 note: form.note,
                 products: products.map((p) => ({
                     product_id: p._id,
@@ -309,7 +339,6 @@ const PurchaseReturn = () => {
             };
 
             if (isEditMode) {
-                // If your backend implements updates for returns
                 await axios.put(`${API_BASE_URL}/api/purchases/returns/${id}`, payload);
                 toast.success("Return note updated successfully!");
             } else {
@@ -450,19 +479,52 @@ const PurchaseReturn = () => {
                         {/* Refund Receipt Card */}
                         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-5 space-y-4">
                             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                                <CreditCard className="w-5 h-5 text-slate-400" /> Cash / Bank Refund (Optional)
+                                <CreditCard className="w-5 h-5 text-slate-400" /> Cash / Bank Refund
                             </h2>
-                            <button
-                                type="button"
-                                onClick={() => setShowPaymentModal(true)}
-                                className="w-full py-3 px-4 bg-slate-50 border border-slate-200 rounded text-base font-medium text-slate-700 hover:bg-slate-100 transition flex justify-between items-center"
-                            >
-                                <span className="text-xs uppercase text-slate-500 font-bold tracking-tight">Deposit To</span>
-                                <span className="text-base text-slate-900 font-semibold">{form.payment_method ? form.payment_method.toUpperCase() : 'None / On Credit'}</span>
-                            </button>
 
+                            {/* Payment Account Selector */}
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                                    Receiving Payment Account
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPaymentModal(true)}
+                                    className="w-full py-3 px-4 bg-slate-50 border border-slate-200 rounded text-base font-medium text-slate-700 hover:bg-slate-100 transition flex justify-between items-center"
+                                >
+                                    <span className="text-xs uppercase text-slate-500 font-bold tracking-tight">Deposit To</span>
+                                    <span className="text-base text-slate-900 font-semibold">
+                                        {selectedAccountObj ? `${selectedAccountObj.name} (${selectedAccountObj.type.toUpperCase()})` : (form.payment_method ? form.payment_method.toUpperCase() : 'None / On Credit')}
+                                    </span>
+                                </button>
+
+                                {selectedAccountObj && (
+                                    <div className="mt-2 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg p-2 flex justify-between items-center">
+                                        <span className="flex items-center gap-1">
+                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                            Active: <b>{selectedAccountObj.name}</b>
+                                        </span>
+                                        <span className="font-bold">Bal: ৳{Number(selectedAccountObj.balance || 0).toFixed(2)}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Refund Received Input with quick-action buttons */}
                             <div className="flex flex-col">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Refund Received (৳)</label>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                        Refund Received (৳)
+                                    </label>
+                                    {totalReturn > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setForm((prev) => ({ ...prev, refund_received: totalReturn }))}
+                                            className="text-xs text-rose-600 font-bold hover:underline"
+                                        >
+                                            Full Refund (৳{totalReturn})
+                                        </button>
+                                    )}
+                                </div>
                                 <input
                                     type="number"
                                     name="refund_received"
@@ -640,6 +702,7 @@ const PurchaseReturn = () => {
                 onClose={() => setShowPaymentModal(false)}
                 onSelectPayment={handlePaymentSelect}
                 defaultPaymentMethod={form.payment_method}
+                defaultSelectedAccount={form.account_id}
             />
         </div>
     );

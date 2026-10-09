@@ -62,7 +62,7 @@ const NavbarV3 = () => {
     { name: t.expenses, icon: Receipt, href: "/expense-threads", color: "text-red-600", bg: "bg-red-50" },
     { name: t.bills, icon: FileText, href: "/bills", color: "text-slate-600", bg: "bg-slate-50" },
     { name: t.reports, icon: ClipboardList, href: "/reports", color: "text-blue-800", bg: "bg-blue-50" },
-    { name: "Sales Return", icon: ClipboardList, href: "/sales/sales-return", color: "text-blue-800", bg: "bg-blue-50" },
+    { name: "Sales Return", icon: ClipboardList, href: "/sales-returns", color: "text-blue-800", bg: "bg-blue-50" },
     { name: "Purchase Return", icon: ClipboardList, href: "/purchase-returns", color: "text-blue-800", bg: "bg-blue-50" },
     { name: "Dispose Products", icon: ClipboardList, href: "/dispose-products", color: "text-blue-800", bg: "bg-blue-50" },
     { name: "Lend Money", icon: ClipboardList, href: "/lend-money", color: "text-blue-800", bg: "bg-blue-50" },

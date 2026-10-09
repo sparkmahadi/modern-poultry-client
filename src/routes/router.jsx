@@ -43,6 +43,8 @@ import BorrowMoney from '../pages/BorrowMoney/BorrowMoney';
 import DisposeProducts from '../pages/DisposeProducts/DisposeProducts';
 import PurchaseReturn from '../pages/Purchase/PurchaseReturn/PurchaseReturn';
 import PurchaseReturnList from '../pages/Purchase/PurchaseReturn/PurchaseReturnList';
+import SalesReturnList from '../pages/Sales/SalesReturn/SalesReturnList';
+import SalesReturn from '../pages/Sales/SalesReturn/SalesReturn';
 
 const router = createBrowserRouter([
   {
@@ -82,10 +84,15 @@ const router = createBrowserRouter([
 
           { path: '/expense-threads', element: <ExpenseThreads /> },
           { path: "/expense-threads/:id", element: <ExpenseThreadDetails /> },
-          
+
           { path: '/bills', element: <BillsList /> },
 
           { path: '/sales', element: <SalesManager /> },
+
+          { path: '/sales-returns', element: <SalesReturnList /> },
+          { path: '/sales-return/:id', element: <SalesReturn /> },
+          { path: '/sales-return/add', element: <SalesReturn /> },
+
           { path: '/sales/product-wise-sales', element: <ProductWiseSales /> },
           { path: '/sales/:saleId', element: <SaleDetails /> },
           { path: '/sales/daily-sales', element: <DailySales /> },
@@ -94,9 +101,9 @@ const router = createBrowserRouter([
 
           { path: '/purchases', element: <PurchaseManager /> },
 
-          { path: '/purchase-returns', element: <PurchaseReturnList   /> },
-          { path: '/purchase-return/:id', element: <PurchaseReturn   /> },
-          { path: '/purchase-return/add', element: <PurchaseReturn   /> },
+          { path: '/purchase-returns', element: <PurchaseReturnList /> },
+          { path: '/purchase-return/:id', element: <PurchaseReturn /> },
+          { path: '/purchase-return/add', element: <PurchaseReturn /> },
 
           { path: '/purchases/daily-purchases', element: <DailyPurchases /> },
           { path: '/purchases/product-wise-purchases', element: <ProductWisePurchases /> },
