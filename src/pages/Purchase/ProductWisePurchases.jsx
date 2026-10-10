@@ -1,411 +1,453 @@
-import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useState
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
+import { Link, useNavigate } from "react-router";
+import {
+    Package,
+    Download,
+    ArrowLeft,
+    Search,
+    ChevronDown,
+    ChevronUp,
+    ChevronLeft,
+    ChevronRight,
+    Calendar,
+    Edit3,
+    DollarSign,
+    Layers,
+    Receipt
+} from "lucide-react";
 import TruckLoader from "../../components/Spinner/TruckLoader";
-import { Link } from "react-router";
 
 const ProductWisePurchases = ({
     fetchUrl = `${import.meta.env.VITE_API_BASE_URL}/api/purchases/product-purchases`,
     title = "Product Purchase Analytics"
 }) => {
-    const [products, setProducts] =
-        useState([]);
-    const [loading, setLoading] =
-        useState(true);
-    const [search, setSearch] =
-        useState("");
-    const [expanded, setExpanded] =
-        useState(null);
+    const navigate = useNavigate();
 
-    const fetchData =
-        useCallback(async () => {
-            setLoading(true);
+    // Data States
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [expanded, setExpanded] = useState(null);
 
-            try {
-                const res =
-                    await axios.get(
-                        fetchUrl
-                    );
+    // Server-Side Pagination States
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
 
-                setProducts(
-                    res.data.data || []
-                );
-            } catch (err) {
-                toast.error(
-                    "Failed to sync product purchases"
-                );
-            } finally {
-                setLoading(false);
+    // Fetch Product Purchase Records
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const urlObj = new URL(fetchUrl, window.location.origin);
+            urlObj.searchParams.set("page", page);
+            urlObj.searchParams.set("limit", limit);
+
+            const res = await axios.get(urlObj.toString());
+            const resData = res.data;
+
+            setProducts(resData.data || []);
+
+            if (resData.pagination) {
+                setTotalPages(resData.pagination.totalPages || 1);
+                setTotalRecords(resData.pagination.total || 0);
+            } else {
+                setTotalRecords((resData.data || []).length);
+                setTotalPages(1);
             }
-        }, [fetchUrl]);
+        } catch (err) {
+            console.error("Product purchases sync error:", err);
+            toast.error("Failed to sync product purchase records.");
+        } finally {
+            setLoading(false);
+        }
+    }, [fetchUrl, page, limit]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    const handleExportExcel =
-        () => {
-            const rows =
-                products.flatMap(
-                    (product) =>
-                        product.purchases.map(
-                            (purchase) => ({
-                                Product:
-                                    product.product_name,
+    const handleLimitChange = (e) => {
+        setLimit(Number(e.target.value));
+        setPage(1);
+        setExpanded(null);
+    };
 
-                                ProductID:
-                                    product.product_id,
+    // Excel Export
+    const handleExportExcel = () => {
+        const rows = products.flatMap((product) =>
+            (product.purchases || []).map((purchase) => ({
+                Product: product.product_name || "N/A",
+                ProductID: product.product_id || "N/A",
+                Supplier: purchase.supplier_name || "Walk-in Vendor",
+                Qty: purchase.qty || 0,
+                PurchasePrice: purchase.purchase_price || 0,
+                Subtotal: purchase.subtotal || 0,
+                PaymentMethod: purchase.payment_method || "N/A",
+                Paid: purchase.paid_amount || 0,
+                Due: purchase.payment_due || 0,
+                Date: purchase.date
+                    ? format(new Date(purchase.date), "yyyy-MM-dd HH:mm")
+                    : "N/A"
+            }))
+        );
 
-                                Supplier:
-                                    purchase.supplier_name,
+        if (rows.length === 0) {
+            return toast.info("No records available to export.");
+        }
 
-                                Qty:
-                                    purchase.qty,
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Product Purchases");
 
-                                PurchasePrice:
-                                    purchase.purchase_price,
+        ws["!cols"] = Array(10).fill({ wch: 18 });
+        XLSX.writeFile(wb, `${title.replace(/\s+/g, "_")}_Page_${page}.xlsx`);
+    };
 
-                                Subtotal:
-                                    purchase.subtotal,
+    // Client-side quick search filtering on currently loaded page
+    const filteredProducts = useMemo(() => {
+        if (!search.trim()) return products;
+        const query = search.toLowerCase();
+        return products.filter((p) =>
+            p.product_name?.toLowerCase().includes(query)
+        );
+    }, [products, search]);
 
-                                PaymentMethod:
-                                    purchase.payment_method,
-
-                                Paid:
-                                    purchase.paid_amount,
-
-                                Due:
-                                    purchase.payment_due,
-
-                                Date:
-                                    format(
-                                        new Date(
-                                            purchase.date
-                                        ),
-                                        "yyyy-MM-dd HH:mm"
-                                    ),
-                            })
-                        )
-                );
-
-            const ws =
-                XLSX.utils.json_to_sheet(
-                    rows
-                );
-
-            const wb =
-                XLSX.utils.book_new();
-
-            XLSX.utils.book_append_sheet(
-                wb,
-                ws,
-                "Product Purchases"
-            );
-
-            XLSX.writeFile(
-                wb,
-                "Product_Purchase_Report.xlsx"
-            );
-        };
-
-    const filteredProducts =
-        useMemo(() => {
-            return products.filter(
-                (p) =>
-                    p.product_name
-                        ?.toLowerCase()
-                        .includes(
-                            search.toLowerCase()
-                        )
-            );
-        }, [products, search]);
-
+    // Financial KPI stats
     const stats = useMemo(() => {
         return {
-            totalProducts:
-                products.length,
-
-            totalQty:
-                products.reduce(
-                    (sum, p) =>
-                        sum +
-                        (p.total_qty || 0),
-                    0
-                ),
-
-            totalAmount:
-                products.reduce(
-                    (sum, p) =>
-                        sum +
-                        (p.total_purchase_amount ||
-                            0),
-                    0
-                ),
+            totalProducts: totalRecords,
+            pageQty: products.reduce((sum, p) => sum + (Number(p.total_qty) || 0), 0),
+            pageAmount: products.reduce((sum, p) => sum + (Number(p.total_purchase_amount) || 0), 0)
         };
-    }, [products]);
+    }, [products, totalRecords]);
 
-    if (loading)
-        return <TruckLoader />;
+    if (loading && products.length === 0) return <TruckLoader />;
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-800">
-                        {title}
-                    </h1>
-
-                    <p className="text-gray-500 text-sm">
-                        Managing{" "}
-                        {
-                            products.length
-                        }{" "}
-                        products
-                    </p>
+        <div className="container mx-auto p-4 md:p-6 max-w-7xl font-sans text-slate-700 space-y-6">
+            {/* Top Toolbar */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 text-white p-5 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition text-slate-300 hover:text-white"
+                        title="Back"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="p-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+                        <Package className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight text-white">{title}</h1>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            SKU-wise inventory procurement breakdown across {totalRecords.toLocaleString()} catalog products
+                        </p>
+                    </div>
                 </div>
 
-                <button
-                    onClick={
-                        handleExportExcel
-                    }
-                    className="bg-green-600 text-white px-5 py-3 rounded-xl font-bold"
-                >
-                    📥 Excel
-                </button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid md:grid-cols-3 gap-5 mb-8">
-                <div className="bg-white rounded-2xl p-6 border-l-4 border-blue-500 shadow-sm">
-                    <p className="text-xs uppercase text-gray-400 font-bold">
-                        Total Products
-                    </p>
-
-                    <p className="text-3xl font-black">
-                        {
-                            stats.totalProducts
-                        }
-                    </p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 border-l-4 border-green-500 shadow-sm">
-                    <p className="text-xs uppercase text-gray-400 font-bold">
-                        Total Qty Purchased
-                    </p>
-
-                    <p className="text-3xl font-black text-green-600">
-                        {stats.totalQty.toLocaleString()}
-                    </p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 border-l-4 border-orange-500 shadow-sm">
-                    <p className="text-xs uppercase text-gray-400 font-bold">
-                        Total Purchase
-                    </p>
-
-                    <p className="text-3xl font-black text-orange-600">
-                        ৳
-                        {stats.totalAmount.toLocaleString()}
-                    </p>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <button
+                        type="button"
+                        onClick={handleExportExcel}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    >
+                        <Download className="w-3.5 h-3.5" /> Export Excel
+                    </button>
                 </div>
             </div>
 
-            {/* Search */}
-            <input
-                type="text"
-                placeholder="Search product..."
-                value={search}
-                onChange={(e) =>
-                    setSearch(
-                        e.target.value
-                    )
-                }
-                className="w-full p-4 rounded-2xl border border-gray-200 mb-6 outline-none focus:border-orange-500"
-            />
+            {/* KPI Metric Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-blue-600" /> Catalog SKUs Tracked
+                    </span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-slate-900">
+                            {stats.totalProducts.toLocaleString()}
+                        </span>
+                    </div>
+                </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
-                <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="p-4 text-left">
-                                Product
-                            </th>
+                <div className="bg-blue-50/50 border border-blue-200/70 p-5 rounded-2xl flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
+                        <Package className="w-4 h-4 text-blue-600" /> Page Units Sourced
+                    </span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-blue-700">
+                            {stats.pageQty.toLocaleString()}
+                        </span>
+                    </div>
+                </div>
 
-                            <th className="p-4 text-center">
-                                Purchase Count
-                            </th>
+                <div className="bg-emerald-50/50 border border-emerald-200/70 p-5 rounded-2xl flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-emerald-600" /> Page Sourcing Outflow
+                    </span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-emerald-700">
+                            ৳{stats.pageAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-                            <th className="p-4 text-center">
-                                Total Qty
-                            </th>
+            {/* Search and Row-Count Selector */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="relative w-full sm:w-96">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                        type="text"
+                        placeholder="Search product on this page..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
+                    />
+                </div>
 
-                            <th className="p-4 text-right">
-                                Avg Price
-                            </th>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span>Products per page:</span>
+                    <select
+                        value={limit}
+                        onChange={handleLimitChange}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 font-bold outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                    </select>
+                </div>
+            </div>
 
-                            <th className="p-4 text-right">
-                                Total Purchase
-                            </th>
+            {/* Main Product Analytics Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3.5">Product SKU</th>
+                                <th className="px-4 py-3.5 text-center">Invoices</th>
+                                <th className="px-4 py-3.5 text-center">Total Qty</th>
+                                <th className="px-4 py-3.5 text-right">Avg Unit Rate (৳)</th>
+                                <th className="px-4 py-3.5 text-right">Total Expense (৳)</th>
+                                <th className="px-4 py-3.5 text-center">Last Purchase</th>
+                                <th className="px-4 py-3.5 text-center w-28">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredProducts.map((product, idx) => {
+                                const isExpanded = expanded === idx;
+                                return (
+                                    <React.Fragment key={product.product_id || idx}>
+                                        <tr className="hover:bg-slate-50/70 transition-colors">
+                                            <td className="px-4 py-3.5 font-bold text-slate-900">
+                                                <div className="flex items-center gap-2">
+                                                    <Package className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                                    <span>{product.product_name || "Unnamed Product"}</span>
+                                                </div>
+                                            </td>
 
-                            <th className="p-4 text-center">
-                                Last Purchase
-                            </th>
+                                            <td className="px-4 py-3.5 text-center">
+                                                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                                    {product.total_purchase_count || 0}
+                                                </span>
+                                            </td>
 
-                            <th className="p-4 text-center">
-                                Action
-                            </th>
-                        </tr>
-                    </thead>
+                                            <td className="px-4 py-3.5 text-center font-mono font-bold text-blue-600">
+                                                {Number(product.total_qty || 0).toLocaleString()}
+                                            </td>
 
-                    <tbody>
-                        {filteredProducts.map(
-                            (
-                                product,
-                                idx
-                            ) => (
-                                <React.Fragment
-                                    key={
-                                        product.product_id
-                                    }
-                                >
-                                    <tr className="border-b hover:bg-gray-50">
-                                        <td className="p-4 font-semibold">
-                                            {
-                                                product.product_name
-                                            }
-                                        </td>
+                                            <td className="px-4 py-3.5 text-right font-mono font-semibold text-slate-700">
+                                                ৳{Number(product.avg_purchase_price || 0).toFixed(2)}
+                                            </td>
 
-                                        <td className="text-center">
-                                            {
-                                                product.total_purchase_count
-                                            }
-                                        </td>
+                                            <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">
+                                                ৳{Number(product.total_purchase_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
 
-                                        <td className="text-center font-bold text-blue-600">
-                                            {
-                                                product.total_qty
-                                            }
-                                        </td>
+                                            <td className="px-4 py-3.5 text-center text-xs text-slate-500 font-medium">
+                                                {product.last_purchase_date
+                                                    ? format(new Date(product.last_purchase_date), "dd MMM yyyy, hh:mm a")
+                                                    : "-"}
+                                            </td>
 
-                                        <td className="text-right">
-                                            ৳
-                                            {
-                                                product.avg_purchase_price
-                                            }
-                                        </td>
-
-                                        <td className="text-right font-bold">
-                                            ৳
-                                            {product.total_purchase_amount.toLocaleString()}
-                                        </td>
-
-                                        <td className="text-center text-sm">
-                                            {format(
-                                                new Date(
-                                                    product.last_purchase_date
-                                                ),
-                                                "Pp"
-                                            )}
-                                        </td>
-
-                                        <td className="text-center">
-                                            <button
-                                                onClick={() =>
-                                                    setExpanded(
-                                                        expanded ===
-                                                            idx
-                                                            ? null
-                                                            : idx
-                                                    )
-                                                }
-                                                className="text-orange-600 font-bold"
-                                            >
-                                                {expanded ===
-                                                    idx
-                                                    ? "Hide"
-                                                    : "Details"}
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {expanded ===
-                                        idx && (
-                                            <tr>
-                                                <td
-                                                    colSpan={
-                                                        7
-                                                    }
-                                                    className="bg-gray-50 p-5"
+                                            <td className="px-4 py-3.5 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpanded(isExpanded ? null : idx)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 mx-auto ${
+                                                        isExpanded
+                                                            ? "bg-slate-800 text-white"
+                                                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                                    }`}
                                                 >
+                                                    <span>{isExpanded ? "Hide" : "Details"}</span>
+                                                    {isExpanded ? (
+                                                        <ChevronUp className="w-3.5 h-3.5" />
+                                                    ) : (
+                                                        <ChevronDown className="w-3.5 h-3.5" />
+                                                    )}
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        {/* Collapsible Invoice Breakdown Sub-row */}
+                                        {isExpanded && (
+                                            <tr className="bg-slate-50/70 border-b border-slate-200">
+                                                <td colSpan={7} className="p-4 md:p-6">
                                                     <div className="space-y-3">
-                                                        {product.purchases.map(
-                                                            (
-                                                                purchase
-                                                            ) => (
+                                                        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                                                <Receipt className="w-4 h-4 text-blue-600" /> Sourcing Transactions for {product.product_name}
+                                                            </span>
+                                                            <span className="text-xs text-slate-400 font-medium">
+                                                                {product.purchases?.length || 0} Purchase Orders
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {(product.purchases || []).map((p) => (
                                                                 <div
-                                                                    key={purchase._id}
-                                                                    className="flex justify-between items-center bg-white p-4 rounded-xl border hover:shadow-sm transition"
+                                                                    key={p._id}
+                                                                    className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition flex flex-col justify-between space-y-3"
                                                                 >
-                                                                    <div>
-                                                                        <p className="font-bold">
-                                                                            {purchase.supplier_name}
-                                                                        </p>
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <p className="font-bold text-slate-900 text-sm">
+                                                                                {p.supplier_name || "Walk-in Supplier"}
+                                                                            </p>
+                                                                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                                                                <Calendar className="w-3.5 h-3.5" />
+                                                                                {p.date
+                                                                                    ? format(new Date(p.date), "dd MMM yyyy, hh:mm a")
+                                                                                    : "N/A"}
+                                                                            </p>
+                                                                        </div>
 
-                                                                        <p className="text-sm text-gray-500">
-                                                                            {format(
-                                                                                new Date(purchase.date),
-                                                                                "Pp"
-                                                                            )}
-                                                                        </p>
+                                                                        <span
+                                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                                (p.payment_due || 0) > 0
+                                                                                    ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                                                                    : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                                                            }`}
+                                                                        >
+                                                                            {(p.payment_due || 0) > 0 ? "Due" : "Settled"}
+                                                                        </span>
+                                                                    </div>
 
-                                                                        <div className="flex gap-3 mt-3">
-                                                                            <Link
-                                                                                to={`/purchases/edit/${purchase._id}`}
-                                                                                className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition"
-                                                                            >
-                                                                                ✏️ Edit Purchase
-                                                                            </Link>
+                                                                    <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-100 text-xs">
+                                                                        <div>
+                                                                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Qty</span>
+                                                                            <span className="font-bold text-slate-800 font-mono">{p.qty}</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Rate</span>
+                                                                            <span className="font-bold text-slate-800 font-mono">৳{Number(p.purchase_price || 0).toFixed(2)}</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Subtotal</span>
+                                                                            <span className="font-bold text-slate-900 font-mono">৳{Number(p.subtotal || 0).toFixed(2)}</span>
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="text-right">
-                                                                        <p>
-                                                                            Qty:{" "}
-                                                                            <b>
-                                                                                {purchase.qty}
-                                                                            </b>
-                                                                        </p>
+                                                                    <div className="flex justify-between items-center pt-1">
+                                                                        <span className="text-xs text-slate-500">
+                                                                            Method: <strong className="uppercase">{p.payment_method || "Cash"}</strong>
+                                                                        </span>
 
-                                                                        <p>
-                                                                            Price: ৳
-                                                                            {purchase.purchase_price}
-                                                                        </p>
-
-                                                                        <p className="font-bold text-orange-600">
-                                                                            ৳{purchase.subtotal}
-                                                                        </p>
+                                                                        <Link
+                                                                            to={`/purchases/edit/${p._id}`}
+                                                                            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                                                                        >
+                                                                            <Edit3 className="w-3 h-3 text-blue-600" /> Edit Order
+                                                                        </Link>
                                                                     </div>
                                                                 </div>
-                                                            )
-                                                        )}
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
                                         )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredProducts.length === 0 && (
+                    <div className="p-12 text-center text-slate-400 font-medium italic text-sm">
+                        No product purchasing records matching this criteria.
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 font-medium">
+                        Showing {totalRecords === 0 ? 0 : (page - 1) * limit + 1} to{" "}
+                        {Math.min(page * limit, totalRecords)} of {totalRecords} products
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPage((prev) => Math.max(prev - 1, 1));
+                                setExpanded(null);
+                            }}
+                            disabled={page <= 1}
+                            className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {/* Page Numbers */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter((pNum) => pNum === 1 || pNum === totalPages || Math.abs(pNum - page) <= 1)
+                            .map((pNum, index, arr) => (
+                                <React.Fragment key={pNum}>
+                                    {index > 0 && arr[index - 1] !== pNum - 1 && (
+                                        <span className="px-1 text-slate-400">...</span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPage(pNum);
+                                            setExpanded(null);
+                                        }}
+                                        className={`w-7 h-7 rounded-lg font-bold transition ${
+                                            page === pNum
+                                                ? "bg-blue-600 text-white"
+                                                : "text-slate-600 hover:bg-white border border-slate-200"
+                                        }`}
+                                    >
+                                        {pNum}
+                                    </button>
                                 </React.Fragment>
-                            )
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPage((prev) => Math.min(prev + 1, totalPages));
+                                setExpanded(null);
+                            }}
+                            disabled={page >= totalPages}
+                            className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

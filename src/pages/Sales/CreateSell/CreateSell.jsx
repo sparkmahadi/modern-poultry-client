@@ -19,10 +19,11 @@ import {
     AlertTriangle,
     CheckCircle2,
     Layers,
-    ArrowLeft
+    Plus
 } from 'lucide-react';
-import CustomerFormModal from '../../Customers/CustomerFormModal';
 import PaymentModal from "../../Purchase/PaymentModal";
+import CreateBatchForm from '../../FarmBatches/CreateBatchForm';
+import CustomerFormModal from '../../Customers/CustomerFormModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -30,7 +31,6 @@ const CreateSell = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Check if redirected from a specific batch
     const searchParams = new URLSearchParams(location.search);
     const prefillBatchId = location.state?.batchId || searchParams.get('batchId') || '';
     const prefillCustomerId = location.state?.customerId || searchParams.get('customerId') || '';
@@ -41,10 +41,6 @@ const CreateSell = () => {
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- Farm Batch Integration ---
-    const [batches, setBatches] = useState([]);
-    const [selectedBatchId, setSelectedBatchId] = useState(prefillBatchId);
-
     // --- Customer Selection ---
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [customerSearch, setCustomerSearch] = useState('');
@@ -53,6 +49,14 @@ const CreateSell = () => {
     const [showCustomerResults, setShowCustomerResults] = useState(false);
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
     const customerRef = useRef(null);
+
+    // --- Farm Batch Integration ---
+    const [batches, setBatches] = useState([]);
+    const [selectedBatchId, setSelectedBatchId] = useState(prefillBatchId);
+    const [batchSearch, setBatchSearch] = useState('');
+    const [showBatchResults, setShowBatchResults] = useState(false);
+    const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+    const batchRef = useRef(null);
 
     // --- Product Selection & Line Items ---
     const [products, setProducts] = useState([]);
@@ -71,7 +75,7 @@ const CreateSell = () => {
         paid_amount: 0
     });
 
-    // 1. Initial Load: Date, Accounts & Batches
+    // 1. Initial Load
     useEffect(() => {
         const now = new Date();
         const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -99,7 +103,6 @@ const CreateSell = () => {
                     const batchList = batchRes.value.data?.data || batchRes.value.data?.batches || [];
                     setBatches(batchList);
 
-                    // If redirected with a batch ID, pre-load customer
                     if (prefillBatchId) {
                         const targetBatch = batchList.find(b => b._id === prefillBatchId);
                         if (targetBatch && targetBatch.farmerId) {
@@ -119,38 +122,33 @@ const CreateSell = () => {
         }
     }, [prefillBatchId, prefillCustomerId]);
 
-    // Helper: Load Customer Directly by ID
     const fetchCustomerById = async (cid) => {
         try {
             const res = await axios.get(`${API_BASE_URL}/api/customers/${cid}`);
-            if (res.data?.data) {
-                setSelectedCustomer(res.data.data);
-            }
+            if (res.data?.data) setSelectedCustomer(res.data.data);
         } catch (err) {
             console.error('Pre-fetch customer error:', err);
         }
     };
 
-    // Auto-sync customer when batch changes
-    const handleBatchSelection = (batchId) => {
-        setSelectedBatchId(batchId);
-        if (!batchId) return;
-
-        const target = batches.find((b) => b._id === batchId);
-        if (target && target.farmerId) {
-            fetchCustomerById(target.farmerId);
+    // Auto-unlink batch if customer changes and batch doesn't belong to them
+    useEffect(() => {
+        if (selectedCustomer && selectedBatchId) {
+            const batchBelongsToCustomer = batches.find(
+                (b) => b._id === selectedBatchId && b.farmerId === selectedCustomer._id
+            );
+            if (!batchBelongsToCustomer) {
+                setSelectedBatchId('');
+            }
         }
-    };
+    }, [selectedCustomer, selectedBatchId, batches]);
 
-    // Outside Click Dropdown Close
+    // Outside Click Handling
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (customerRef.current && !customerRef.current.contains(e.target)) {
-                setShowCustomerResults(false);
-            }
-            if (productRef.current && !productRef.current.contains(e.target)) {
-                setShowProductResults(false);
-            }
+            if (customerRef.current && !customerRef.current.contains(e.target)) setShowCustomerResults(false);
+            if (batchRef.current && !batchRef.current.contains(e.target)) setShowBatchResults(false);
+            if (productRef.current && !productRef.current.contains(e.target)) setShowProductResults(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -175,6 +173,45 @@ const CreateSell = () => {
         return () => clearTimeout(delay);
     }, [customerSearch]);
 
+    // Derived Batch Filtering (Client-side since batches are pre-loaded)
+    const displayedBatches = useMemo(() => {
+        let filtered = batches;
+        if (selectedCustomer) {
+            filtered = filtered.filter((b) => b.farmerId === selectedCustomer._id);
+        }
+        if (batchSearch) {
+            const q = batchSearch.toLowerCase();
+            filtered = filtered.filter((b) =>
+                (b.chicksBreed && b.chicksBreed.toLowerCase().includes(q)) ||
+                (b.farmer && b.farmer.toLowerCase().includes(q)) ||
+                (b._id && b._id.toLowerCase().includes(q))
+            );
+        }
+        return filtered;
+    }, [batches, selectedCustomer, batchSearch]);
+
+    const handleBatchSelection = (batch) => {
+        setSelectedBatchId(batch._id);
+        setShowBatchResults(false);
+        setBatchSearch('');
+        if (batch.farmerId && !selectedCustomer) {
+            fetchCustomerById(batch.farmerId);
+        }
+    };
+
+const handleBatchCreated = (newBatch) => {
+    if (!newBatch || !newBatch._id) return;
+
+    // Add to list and auto-select
+    setBatches((prev) => [newBatch, ...prev.filter((b) => b._id !== newBatch._id)]);
+    setSelectedBatchId(newBatch._id);
+    setIsBatchModalOpen(false);
+
+    // If batch belongs to a farmer and customer isn't selected, select them
+    if (newBatch.farmerId && !selectedCustomer) {
+        fetchCustomerById(newBatch.farmerId);
+    }
+};
     // Debounced Product Search
     useEffect(() => {
         const delay = setTimeout(async () => {
@@ -194,11 +231,9 @@ const CreateSell = () => {
         return () => clearTimeout(delay);
     }, [productSearch]);
 
-    // Add Product to Invoice
+    // Product Handlers
     const addProduct = async (product) => {
-        if (products.find((p) => p._id === product._id)) {
-            return toast.warn('Item already added.');
-        }
+        if (products.find((p) => p._id === product._id)) return toast.warn('Item already added.');
 
         let stock = 0;
         try {
@@ -213,14 +248,7 @@ const CreateSell = () => {
         const price = Number(product.price || product.sale_price || 0);
         setProducts((prev) => [
             ...prev,
-            {
-                _id: product._id,
-                item_name: product.item_name || product.name,
-                qty: 1,
-                price: price,
-                subtotal: price,
-                availableStock: stock
-            }
+            { _id: product._id, item_name: product.item_name || product.name, qty: 1, price, subtotal: price, availableStock: stock }
         ]);
         setProductSearch('');
         setShowProductResults(false);
@@ -228,55 +256,37 @@ const CreateSell = () => {
 
     const updateQty = (id, val) => {
         const qty = Number(val) || 0;
-        setProducts((prev) =>
-            prev.map((p) => (p._id === id ? { ...p, qty, subtotal: +(qty * p.price).toFixed(2) } : p))
-        );
+        setProducts((prev) => prev.map((p) => (p._id === id ? { ...p, qty, subtotal: +(qty * p.price).toFixed(2) } : p)));
     };
 
     const updatePrice = (id, val) => {
         const price = Number(val) || 0;
-        setProducts((prev) =>
-            prev.map((p) => (p._id === id ? { ...p, price, subtotal: +(p.qty * price).toFixed(2) } : p))
-        );
+        setProducts((prev) => prev.map((p) => (p._id === id ? { ...p, price, subtotal: +(p.qty * price).toFixed(2) } : p)));
     };
 
     const updateSubtotal = (id, val) => {
         const subtotal = Number(val) || 0;
         setProducts((prev) =>
-            prev.map((p) =>
-                p._id === id
-                    ? { ...p, subtotal, price: p.qty > 0 ? +(subtotal / p.qty).toFixed(2) : 0 }
-                    : p
-            )
+            prev.map((p) => (p._id === id ? { ...p, subtotal, price: p.qty > 0 ? +(subtotal / p.qty).toFixed(2) : 0 } : p))
         );
     };
 
-    const removeProduct = (id) => {
-        setProducts((prev) => prev.filter((p) => p._id !== id));
-    };
+    const removeProduct = (id) => setProducts((prev) => prev.filter((p) => p._id !== id));
 
-    const totalAmount = useMemo(() => {
-        return products.reduce((acc, p) => acc + Number(p.subtotal || 0), 0);
-    }, [products]);
+    const totalAmount = useMemo(() => products.reduce((acc, p) => acc + Number(p.subtotal || 0), 0), [products]);
+    const remainingDue = useMemo(() => Math.max(0, Number(totalAmount.toFixed(2)) - Number(form.paid_amount || 0)), [totalAmount, form.paid_amount]);
 
-    const remainingDue = useMemo(() => {
-        return Math.max(0, Number(totalAmount.toFixed(2)) - Number(form.paid_amount || 0));
-    }, [totalAmount, form.paid_amount]);
-
-    // Submit Memo
     const handleSaveMemo = async () => {
         if (!memoNo) return toast.error('Enter memo number.');
         if (!selectedCustomer) return toast.error('Select a customer.');
         if (products.length === 0) return toast.error('Add at least one product.');
-        if (form.paid_amount > 0 && !form.account_id) {
-            return toast.error('Select receiving payment account.');
-        }
+        if (form.paid_amount > 0 && !form.account_id) return toast.error('Select receiving payment account.');
 
         const payload = {
             memoNo,
             date: new Date(dateTime).toISOString(),
             customer_id: selectedCustomer._id,
-            batch_id: selectedBatchId || null, // 👈 Linked to Farm Batch[cite: 1]
+            batch_id: selectedBatchId || null,
             products: products.map((p) => ({
                 product_id: p._id,
                 qty: p.qty,
@@ -299,14 +309,12 @@ const CreateSell = () => {
                 toast.success(res.data.message || 'Sale created successfully!');
                 setProducts([]);
                 setSelectedCustomer(null);
+                setSelectedBatchId('');
                 setForm((prev) => ({ ...prev, paid_amount: 0 }));
                 setNotes('');
                 setMemoNo(`INV-${Date.now().toString().slice(-6)}`);
-                
-                // If this came from a batch, prompt to go back to batch view
-                if (selectedBatchId) {
-                    navigate(`/farm-batches/${selectedBatchId}`);
-                }
+
+                if (selectedBatchId) navigate(`/farm-batches/${selectedBatchId}`);
             } else {
                 toast.info(res.data?.message);
             }
@@ -317,9 +325,11 @@ const CreateSell = () => {
         }
     };
 
+    const selectedBatchDetails = batches.find((b) => b._id === selectedBatchId);
+
     return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto font-sans text-slate-700 min-h-screen">
-            {/* Top Toolbar Ribbon */}
+            {/* Top Toolbar */}
             <div className="bg-slate-900 text-white p-5 rounded-2xl mb-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="p-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
@@ -328,11 +338,6 @@ const CreateSell = () => {
                     <div>
                         <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                             Sales Invoice Entry
-                            {selectedBatchId && (
-                                <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                    <Layers className="w-3 h-3" /> Batch Linked
-                                </span>
-                            )}
                         </h1>
                         <p className="text-xs text-slate-400">Direct Retail & Farm Production Billing</p>
                     </div>
@@ -349,7 +354,6 @@ const CreateSell = () => {
                             className="bg-transparent text-sm font-bold text-white focus:outline-none w-28 text-right"
                         />
                     </div>
-
                     <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl">
                         <Calendar className="w-4 h-4 text-slate-400" />
                         <input
@@ -362,152 +366,150 @@ const CreateSell = () => {
                 </div>
             </div>
 
-            {/* Farm Batch Assignment Strip */}
-            <div className="bg-amber-50/60 border border-amber-200/70 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
-                        <Layers className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-amber-900 block">
-                            Assign to Farm Batch (Optional)
+            {/* Entity Selection (Customer & Batch) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {/* Customer Section */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <User className="w-4 h-4 text-blue-600" /> Customer Account
                         </span>
-                        <p className="text-xs text-amber-700">
-                            Tagging a batch adds this sale to the farmer's feed, chick, or medicine production ledger.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <select
-                        value={selectedBatchId}
-                        onChange={(e) => handleBatchSelection(e.target.value)}
-                        className="w-full md:w-72 bg-white border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-                    >
-                        <option value="">-- General Walk-in (No Batch) --</option>
-                        {batches.map((b) => (
-                            <option key={b._id} value={b._id}>
-                                {b.farmer ? `${b.farmer} (${b.chicksBreed || 'Batch'})` : b._id}
-                            </option>
-                        ))}
-                    </select>
-
-                    {selectedBatchId && (
                         <button
                             type="button"
-                            onClick={() => setSelectedBatchId('')}
-                            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-amber-100 transition"
-                            title="Unlink Batch"
+                            onClick={() => setIsCustomerModalOpen(true)}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
                         >
-                            <X className="w-4 h-4" />
+                            <UserPlus className="w-3.5 h-3.5" /> New
                         </button>
-                    )}
-                </div>
-            </div>
+                    </div>
 
-            {/* Customer Search & Card */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-                <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <User className="w-4 h-4 text-blue-600" /> Customer Account
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => setIsCustomerModalOpen(true)}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
-                    >
-                        <UserPlus className="w-3.5 h-3.5" /> Add Customer
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-5 relative" ref={customerRef}>
-                        <div className="relative">
+                    {!selectedCustomer ? (
+                        <div className="relative flex-1" ref={customerRef}>
                             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                             <input
                                 type="text"
                                 value={customerSearch}
                                 onChange={(e) => setCustomerSearch(e.target.value)}
                                 placeholder="Search customer by name or phone..."
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
                             />
                             {customerLoading && (
-                                <span className="absolute right-3.5 top-2.5 text-xs text-blue-600 animate-pulse font-semibold">
+                                <span className="absolute right-3.5 top-3 text-xs text-blue-600 animate-pulse font-semibold">
                                     Searching...
                                 </span>
                             )}
+                            {showCustomerResults && customerResults.length > 0 && (
+                                <ul className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                    {customerResults.map((c) => (
+                                        <li
+                                            key={c._id}
+                                            onClick={() => {
+                                                setSelectedCustomer(c);
+                                                setShowCustomerResults(false);
+                                                setCustomerSearch('');
+                                            }}
+                                            className="p-3 hover:bg-blue-50/70 cursor-pointer flex justify-between items-center transition"
+                                        >
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800">{c.name}</p>
+                                                <p className="text-xs text-slate-400">{c.phone || 'No phone'}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col justify-center bg-blue-50/60 border border-blue-100 p-4 rounded-xl relative group">
+                            <button
+                                onClick={() => setSelectedCustomer(null)}
+                                className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition opacity-0 group-hover:opacity-100"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <h3 className="text-base font-bold text-slate-900">{selectedCustomer.name}</h3>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
+                                <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-slate-400" /> {selectedCustomer.phone || 'N/A'}</span>
+                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-400" /> {selectedCustomer.address || 'N/A'}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
-                        {showCustomerResults && customerResults.length > 0 && (
-                            <ul className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
-                                {customerResults.map((c) => (
-                                    <li
-                                        key={c._id}
-                                        onClick={() => {
-                                            setSelectedCustomer(c);
-                                            setShowCustomerResults(false);
-                                            setCustomerSearch('');
-                                        }}
-                                        className="p-3 hover:bg-blue-50/70 cursor-pointer flex justify-between items-center transition"
-                                    >
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">{c.name}</p>
-                                            <p className="text-xs text-slate-400">{c.phone || 'No phone'}</p>
-                                        </div>
-                                        {c.manual_due > 0 && (
-                                            <span className="text-xs bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded">
-                                                Due: ৳{c.manual_due}
-                                            </span>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                {/* Batch Section */}
+                <div className="bg-amber-50/40 p-5 rounded-2xl border border-amber-200/60 shadow-sm flex flex-col h-full">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+                            <Layers className="w-4 h-4 text-amber-600" /> Farm Batch Tag
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setIsBatchModalOpen(true)}
+                            className="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> New Batch
+                        </button>
                     </div>
 
-                    <div className="md:col-span-7">
-                        {selectedCustomer ? (
-                            <div className="flex items-center justify-between bg-blue-50/60 border border-blue-100 p-3 rounded-xl">
-                                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
-                                    <div>
-                                        <span className="text-slate-400 uppercase font-bold block text-[10px]">Name</span>
-                                        <span className="text-sm font-bold text-slate-900">{selectedCustomer.name}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 uppercase font-bold block text-[10px]">Phone</span>
-                                        <span className="font-semibold text-slate-700 flex items-center gap-1">
-                                            <Phone className="w-3 h-3 text-slate-400" />
-                                            {selectedCustomer.phone || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 uppercase font-bold block text-[10px]">Address</span>
-                                        <span className="font-semibold text-slate-700 flex items-center gap-1">
-                                            <MapPin className="w-3 h-3 text-slate-400" />
-                                            {selectedCustomer.address || 'N/A'}
-                                        </span>
-                                    </div>
-                                    {selectedCustomer.manual_due > 0 && (
-                                        <div>
-                                            <span className="text-rose-400 uppercase font-bold block text-[10px]">Ledger Due</span>
-                                            <span className="font-bold text-rose-600">৳{selectedCustomer.manual_due}</span>
-                                        </div>
+                    {!selectedBatchId ? (
+                        <div className="relative flex-1" ref={batchRef}>
+                            <Search className="w-4 h-4 text-amber-500/70 absolute left-3.5 top-3" />
+                            <input
+                                type="text"
+                                value={batchSearch}
+                                onChange={(e) => setBatchSearch(e.target.value)}
+                                onFocus={() => setShowBatchResults(true)}
+                                placeholder={selectedCustomer ? `Search ${selectedCustomer.name}'s batches...` : "Search available farm batches..."}
+                                className="w-full bg-white border border-amber-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition placeholder:text-amber-700/40"
+                            />
+                            
+                            {showBatchResults && (
+                                <ul className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                    {displayedBatches.length > 0 ? (
+                                        displayedBatches.map((b) => (
+                                            <li
+                                                key={b._id}
+                                                onClick={() => handleBatchSelection(b)}
+                                                className="p-3 hover:bg-amber-50 cursor-pointer flex flex-col transition"
+                                            >
+                                                <span className="text-sm font-bold text-slate-800">{b.chicksBreed || 'Batch'} - {b.farmer || 'Unknown Farmer'}</span>
+                                                <span className="text-xs text-slate-400">Qty: {b.chicksQuantity} | Started: {b.startDate?.split('T')[0]}</span>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="p-4 text-sm text-slate-500 text-center flex flex-col items-center gap-2">
+                                            No batches found for this criteria.
+                                            {selectedCustomer && (
+                                                <button 
+                                                    onClick={() => setIsBatchModalOpen(true)}
+                                                    className="text-xs font-bold text-amber-600 underline"
+                                                >
+                                                    Create one for {selectedCustomer.name}
+                                                </button>
+                                            )}
+                                        </li>
                                     )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedCustomer(null)}
-                                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                                </ul>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col justify-center bg-white border border-amber-300 p-4 rounded-xl relative group shadow-sm">
+                            <button
+                                onClick={() => setSelectedBatchId('')}
+                                className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                {selectedBatchDetails?.chicksBreed || 'Batch'} 
+                                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase">Active</span>
+                            </h3>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
+                                <span>Farmer: <span className="font-semibold">{selectedBatchDetails?.farmer || 'N/A'}</span></span>
+                                <span>Quantity: <span className="font-semibold">{selectedBatchDetails?.chicksQuantity || 0}</span></span>
                             </div>
-                        ) : (
-                            <div className="h-full flex items-center justify-center p-3 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400 italic">
-                                No customer selected. Search above or select an assigned batch.
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -776,6 +778,15 @@ const CreateSell = () => {
                 defaultPaymentMethod={form.payment_method}
                 defaultSelectedAccount={form.account_id}
             />
+
+            {/* NEW: Batch Creation Modal Integration */}
+            {isBatchModalOpen && (
+                <CreateBatchForm 
+                    batchData={selectedCustomer ? { farmer: selectedCustomer.name, farmerId: selectedCustomer._id } : null}
+                    onSuccess={handleBatchCreated}
+                    onClose={() => setIsBatchModalOpen(false)}
+                />
+            )}
         </div>
     );
 };

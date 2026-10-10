@@ -18,33 +18,45 @@ const initialFormData = {
     active: true
 };
 
+const formatDateForInput = (dateVal, fallback = "") => {
+    if (!dateVal) return fallback;
+    try {
+        if (typeof dateVal === "string") {
+            return dateVal.split("T")[0];
+        }
+        return new Date(dateVal).toISOString().split("T")[0];
+    } catch {
+        return fallback;
+    }
+};
+
 const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
-    const isEditing = !!batchData?._id;
+    const isEditing = Boolean(batchData?._id);
 
-    const [formData, setFormData] = useState(
-        batchData
-            ? {
-                ...initialFormData,
-                ...batchData,
-                startDate: batchData.startDate?.split("T")[0],
-                expectedEndDate: batchData.expectedEndDate?.split("T")[0] || "",
-            }
-            : initialFormData
-    );
+    const [formData, setFormData] = useState(() => {
+        if (!batchData) return initialFormData;
+        return {
+            ...initialFormData,
+            ...batchData,
+            startDate: formatDateForInput(batchData.startDate, initialFormData.startDate),
+            expectedEndDate: formatDateForInput(batchData.expectedEndDate, ""),
+        };
+    });
 
-    const [selectedFarmer, setSelectedFarmer] = useState(
-        batchData
-            ? { _id: batchData.farmerId, name: batchData.farmer }
-            : null
-    );
+    const [selectedFarmer, setSelectedFarmer] = useState(() => {
+        if (batchData?.farmerId || batchData?.farmer) {
+            return {
+                _id: batchData.farmerId || null,
+                name: batchData.farmer || ""
+            };
+        }
+        return null;
+    });
 
     const [loading, setLoading] = useState(false);
 
-    // UPDATED: Handle change now checks for checkboxes
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-
-        // Use 'checked' for checkboxes, 'number' for numbers, otherwise 'value'
         const finalValue = type === "checkbox"
             ? checked
             : type === "number"
@@ -56,8 +68,14 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
 
     const handleSaveBatch = async (e) => {
         e.preventDefault();
-        if (!selectedFarmer) {
+
+        if (!selectedFarmer || !selectedFarmer.name) {
             toast.error("Please select a farmer.");
+            return;
+        }
+
+        if (Number(formData.chicksQuantity) <= 0) {
+            toast.error("Please enter a valid chicks quantity (greater than 0).");
             return;
         }
 
@@ -65,19 +83,49 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
             ...formData,
             farmer: selectedFarmer.name,
             farmerId: selectedFarmer._id,
+            chicksQuantity: Number(formData.chicksQuantity) || 0,
+            feedAssigned: Number(formData.feedAssigned) || 0,
         };
 
+        setLoading(true);
         try {
-            console.log(payload);
-            setLoading(true);
             const res = isEditing
                 ? await axios.put(`${API_BASE_URL}/api/batches/${batchData._id}`, payload)
                 : await axios.post(`${API_BASE_URL}/api/batches`, payload);
 
-            toast.success(isEditing ? "Batch updated" : "Batch created");
-            onSuccess && onSuccess(res.data.data);
+            // Extract ID across all response formats ({ batchId }, { data: { _id } }, etc.)
+            const resolvedBatchId =
+                res.data?.batchId ||
+                res.data?.insertedId ||
+                res.data?.data?._id ||
+                res.data?.batch?._id ||
+                res.data?._id ||
+                (isEditing ? batchData?._id : null);
+
+            if (!resolvedBatchId) {
+                throw new Error("Batch was created but server did not return a valid Batch ID.");
+            }
+
+            const serverBatchData = res.data?.data || res.data?.batch || {};
+
+            // Construct normalized batch record for parent state
+            const completeBatch = {
+                ...payload,
+                ...serverBatchData,
+                _id: resolvedBatchId.toString(),
+            };
+
+            toast.success(isEditing ? "Batch updated successfully!" : "Batch created successfully!");
+
+            if (typeof onSuccess === "function") {
+                onSuccess(completeBatch);
+            }
+            if (typeof onClose === "function") {
+                onClose();
+            }
         } catch (err) {
-            toast.error(err.response?.data?.message || "Error saving batch");
+            console.error("Batch save error:", err);
+            toast.error(err.response?.data?.message || err.message || "Error saving batch");
         } finally {
             setLoading(false);
         }
@@ -90,7 +138,13 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
                     <h2 className="text-xl font-bold text-gray-800">
                         {isEditing ? "Edit Batch" : "Create New Batch"}
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                    <button 
+                        type="button" 
+                        onClick={onClose} 
+                        className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                    >
+                        &times;
+                    </button>
                 </div>
 
                 <form onSubmit={handleSaveBatch} className="p-6 space-y-4">
@@ -100,6 +154,7 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
                         apiUrl={`${API_BASE_URL}/api/customers`}
                         selectedItem={selectedFarmer}
                         onSelect={(item) => {
+                            if (!item) return;
                             setSelectedFarmer(item);
                             setFormData((p) => ({ ...p, farmer: item.name, farmerId: item._id }));
                         }}
@@ -109,11 +164,24 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Chicks Quantity</label>
-                            <input type="number" name="chicksQuantity" value={formData.chicksQuantity} onChange={handleChange} min={1} className="w-full border rounded-md p-2" />
+                            <input 
+                                type="number" 
+                                name="chicksQuantity" 
+                                value={formData.chicksQuantity} 
+                                onChange={handleChange} 
+                                min={1} 
+                                required
+                                className="w-full border rounded-md p-2" 
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1">Chicks Breed</label>
-                            <select name="chicksBreed" value={formData.chicksBreed} onChange={handleChange} className="w-full border rounded-md p-2">
+                            <select 
+                                name="chicksBreed" 
+                                value={formData.chicksBreed} 
+                                onChange={handleChange} 
+                                className="w-full border rounded-md p-2"
+                            >
                                 <option value="Broiler">Broiler</option>
                                 <option value="Layer">Layer</option>
                                 <option value="Breeder">Breeder</option>
@@ -124,33 +192,63 @@ const CreateBatchForm = ({ batchData = null, onSuccess, onClose }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Start Date</label>
-                            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full border rounded-md p-2" />
+                            <input 
+                                type="date" 
+                                name="startDate" 
+                                value={formData.startDate || ""} 
+                                onChange={handleChange} 
+                                className="w-full border rounded-md p-2" 
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1">Expected End Date</label>
-                            <input type="date" name="expectedEndDate" value={formData.expectedEndDate} onChange={handleChange} className="w-full border rounded-md p-2" />
-                        </div>
-                        <div className="flex items-center space-x-2 py-2">
-                            <input
-                                type="checkbox"
-                                id="activeStatus"
-                                name="active"
-                                checked={formData.active}
-                                onChange={handleChange}
-                                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                            <input 
+                                type="date" 
+                                name="expectedEndDate" 
+                                value={formData.expectedEndDate || ""} 
+                                onChange={handleChange} 
+                                className="w-full border rounded-md p-2" 
                             />
-                            <label htmlFor="activeStatus" className="text-sm font-medium text-gray-700">
-                                Batch is currently active
-                            </label>
                         </div>
                     </div>
 
-                    <textarea name="notes" rows="3" value={formData.notes} onChange={handleChange} className="w-full border rounded-md p-2" placeholder="Notes..." />
+                    <div className="flex items-center space-x-2 py-2">
+                        <input
+                            type="checkbox"
+                            id="activeStatus"
+                            name="active"
+                            checked={Boolean(formData.active)}
+                            onChange={handleChange}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <label htmlFor="activeStatus" className="text-sm font-medium text-gray-700">
+                            Batch is currently active
+                        </label>
+                    </div>
+
+                    <textarea 
+                        name="notes" 
+                        rows="3" 
+                        value={formData.notes || ""} 
+                        onChange={handleChange} 
+                        className="w-full border rounded-md p-2" 
+                        placeholder="Notes..." 
+                    />
 
                     <div className="flex space-x-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
-                            {loading ? "Saving..." : isEditing ? "Update" : "Save Batch"}
+                        <button 
+                            type="button" 
+                            onClick={onClose} 
+                            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            {loading ? "Saving..." : isEditing ? "Update Batch" : "Save Batch"}
                         </button>
                     </div>
                 </form>

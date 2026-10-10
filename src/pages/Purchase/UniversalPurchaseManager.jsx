@@ -4,6 +4,19 @@ import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    Download, 
+    Plus, 
+    Calendar, 
+    Package, 
+    FileSpreadsheet, 
+    Trash2, 
+    Eye, 
+    Edit3,
+    ArrowLeft
+} from 'lucide-react';
 import PurchaseDetailsModal from './PurchaseDetailsModal';
 import TruckLoader from '../../components/Spinner/TruckLoader';
 
@@ -14,69 +27,113 @@ const UniversalPurchaseManager = ({
     title = "Purchase Dashboard",
     context = "main"
 }) => {
+    const navigate = useNavigate();
+
+    // Data States
     const [purchases, setPurchases] = useState([]);
     const [purchase, setPurchase] = useState({});
-    // const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all');
-    console.log(purchases);
+    const [filter, setFilter] = useState('all'); // 'all', 'due', 'paid'
 
+    // Server-Side Pagination States
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+
+    // Modal States
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState("");
     const [selectedAccountId, setSelectedAccountId] = useState("");
 
-    const navigate = useNavigate();
-
+    // --- Data Fetching with Query Merging ---
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            // Build URL with pagination and filter parameters
+            const urlObj = new URL(fetchUrl, window.location.origin);
+            urlObj.searchParams.set('page', page);
+            urlObj.searchParams.set('limit', limit);
+            if (filter === 'due') {
+                urlObj.searchParams.set('type', 'due');
+            }
+
             const [pRes, aRes] = await Promise.all([
-                axios.get(fetchUrl),
+                axios.get(urlObj.toString()),
                 axios.get(ACCOUNTS_API)
             ]);
-            console.log(pRes, aRes);
-            setPurchases(pRes.data.data || []);
-            setAccounts(aRes.data.data || []);
+
+            const pData = pRes.data;
+            setPurchases(pData.data || []);
+            setAccounts(aRes.data?.data || []);
+
+            // Read pagination metadata from server
+            if (pData.pagination) {
+                setTotalPages(pData.pagination.totalPages || 1);
+                setTotalRecords(pData.pagination.total || 0);
+            } else {
+                setTotalRecords((pData.data || []).length);
+                setTotalPages(1);
+            }
         } catch (err) {
-            toast.error('Sync failed.');
+            console.error("Purchase sync error:", err);
+            toast.error('Failed to load purchase records.');
         } finally {
             setLoading(false);
         }
-    }, [fetchUrl]);
+    }, [fetchUrl, page, limit, filter]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => { 
+        fetchData(); 
+    }, [fetchData]);
 
+    // Reset to page 1 on filter or limit changes
+    const handleFilterChange = (newFilter) => {
+        setFilter(newFilter);
+        setPage(1);
+    };
+
+    const handleLimitChange = (e) => {
+        setLimit(Number(e.target.value));
+        setPage(1);
+    };
+
+    // --- Excel Export ---
     const handleExportExcel = () => {
-        // We use flatMap because one purchase has many products
-        // This creates one row per product item
         const data = purchases.flatMap(p => {
-            // If there are no products, return a basic row
             if (!p.products || p.products.length === 0) {
                 return [{
                     Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
-                    Supplier: p.supplier_name|| 'Walk-in',
+                    Supplier: p.supplier_name || 'Walk-in',
                     ProductName: 'No Products',
                     ProductID: 'N/A',
+                    Unit: 'pcs',
                     Qty: 0,
                     Price: 0,
                     Subtotal: 0,
-                    Method: p.payment_method
+                    TotalOrder: p.total_amount || 0,
+                    Paid: p.paid_amount || 0,
+                    Due: (p.total_amount || 0) - (p.paid_amount || 0),
+                    Method: p.payment_method || 'N/A'
                 }];
             }
 
-            // Map each product to its own row
             return p.products.map(item => ({
                 Date: p.date ? format(new Date(p.date), "yyyy-MM-dd") : 'N/A',
                 Supplier: p.supplier_name || 'Walk-in',
-                // Extracting ID from $oid if it exists, otherwise use raw ID
                 ProductName: item.name || 'N/A',
                 ProductID: item.product_id?.$oid || item.product_id || 'N/A',
+                Unit: item.unit || 'pcs',
                 Qty: item.qty || 0,
                 Price: item.purchase_price || 0,
                 Subtotal: item.subtotal || 0,
-                Method: p.payment_method
+                TotalOrder: p.total_amount || 0,
+                Paid: p.paid_amount || 0,
+                Due: (p.total_amount || 0) - (p.paid_amount || 0),
+                Method: p.payment_method || 'N/A'
             }));
         });
 
@@ -84,40 +141,37 @@ const UniversalPurchaseManager = ({
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Purchase Details");
 
-        // Auto-size columns (optional but helpful)
-        const maxWidth = 20;
-        ws['!cols'] = Array(11).fill({ wch: maxWidth });
-
-        XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}_Detailed.xlsx`);
+        ws['!cols'] = Array(12).fill({ wch: 18 });
+        XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}_Page_${page}.xlsx`);
     };
 
+    // Client-side quick filter safety check
     const filteredPurchases = useMemo(() => {
-        if (filter === 'due') return purchases.filter(p => (p.total_amount - p.paid_amount) > 0);
-        if (filter === 'paid') return purchases.filter(p => (p.total_amount - p.paid_amount) <= 0);
+        if (filter === 'due') return purchases.filter(p => (Number(p.total_amount) - Number(p.paid_amount)) > 0);
+        if (filter === 'paid') return purchases.filter(p => (Number(p.total_amount) - Number(p.paid_amount)) <= 0);
         return purchases;
     }, [purchases, filter]);
 
+    // Financial KPI Summary
     const stats = useMemo(() => {
-        const total = purchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
-        const paid = purchases.reduce((sum, p) => sum + (p.paid_amount || 0), 0);
+        const total = purchases.reduce((sum, p) => sum + Number(p.total_amount || 0), 0);
+        const paid = purchases.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
         return { total, paid, due: total - paid };
     }, [purchases]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this purchase? This affects inventory.")) return;
+        if (!window.confirm("Delete this purchase? This will restore stock to inventory and revert supplier accounts.")) return;
         try {
             await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/purchases/${id}`);
-            setPurchases(prev => prev.filter(p => p._id !== id));
-            toast.success('Deleted successfully');
+            toast.success('Purchase deleted successfully');
+            fetchData();
         } catch (err) {
-            toast.error('Delete failed');
+            toast.error(err.response?.data?.message || 'Delete operation failed.');
         }
     };
 
-
-
-    const handleOpenPayment = (purchase) => {
-        setSelectedPurchase(purchase);
+    const handleOpenPayment = (p) => {
+        setSelectedPurchase(p);
         setPaymentAmount("");
         setSelectedAccountId("");
         setShowPaymentModal(true);
@@ -125,8 +179,8 @@ const UniversalPurchaseManager = ({
 
     const handleSubmitPayment = async () => {
         const pay = Number(paymentAmount);
-        if (!pay || pay <= 0 || pay > remainingDueOnSelected) return toast.error("Invalid amount");
-        if (!selectedAccountId) return toast.error("Select an account");
+        if (!pay || pay <= 0 || pay > remainingDueOnSelected) return toast.error("Invalid payment amount");
+        if (!selectedAccountId) return toast.error("Please select payment account");
 
         try {
             const response = await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/purchases/pay/${selectedPurchase._id}`, {
@@ -134,222 +188,369 @@ const UniversalPurchaseManager = ({
                 paymentAccountId: selectedAccountId
             });
 
-            console.log(response);
-            setPurchases(prev => prev.map(p => p._id === selectedPurchase._id ? response.data.data : p));
-            toast.success("Payment recorded");
-            setShowPaymentModal(false);
+            if (response.data.success) {
+                toast.success("Payment recorded successfully");
+                setShowPaymentModal(false);
+                fetchData();
+            }
         } catch (err) {
-            console.log(err);
-            toast.error("Payment failed");
-            toast.error(err.response.data.message);
+            toast.error(err.response?.data?.message || "Payment recording failed.");
         }
     };
 
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
-
     const handleViewPurchaseDetails = (p) => {
-    setPurchase(p);        // Set the data to be displayed
-    setIsDetailOpen(true); // Open the modal
-};
+        setPurchase(p);
+        setIsDetailOpen(true);
+    };
 
     const remainingDueOnSelected = selectedPurchase
-        ? (selectedPurchase.total_amount - selectedPurchase.paid_amount)
+        ? (Number(selectedPurchase.total_amount || 0) - Number(selectedPurchase.paid_amount || 0))
         : 0;
 
-    if (loading) return <TruckLoader/>;
+    if (loading && purchases.length === 0) return <TruckLoader />;
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Header with Navigational Buttons */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="container mx-auto p-4 md:p-6 max-w-7xl font-sans text-slate-700 space-y-6">
+            {/* Header Toolbar */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 text-white p-5 rounded-2xl shadow-sm">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-800">{title}</h1>
-                    <p className="text-gray-500 text-sm">Managing {purchases.length} purchase records</p>
+                    <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        {title}
+                    </h1>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                        Total {totalRecords.toLocaleString()} transactions recorded
+                    </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    {/* Universal Export & Create */}
-                    <button onClick={handleExportExcel} className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
-                        📥 Excel
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <button 
+                        onClick={handleExportExcel} 
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    >
+                        <Download className="w-3.5 h-3.5" /> Export Excel
                     </button>
 
                     <button
                         onClick={() => navigate("/purchases/create")}
-                        className="bg-orange-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-orange-700 transition"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5"
                     >
-                        + New Purchase
+                        <Plus className="w-3.5 h-3.5" /> New Purchase
                     </button>
 
-                    {/* Dashboard Contextual Buttons */}
                     {context === "main" && (
                         <>
                             <button
                                 onClick={() => navigate("/purchases/daily-purchases")}
-                                className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                📅 Daily Log
+                                <Calendar className="w-3.5 h-3.5" /> Daily Log
                             </button>
                             <button
                                 onClick={() => navigate("/purchases/product-wise-purchases")}
-                                className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-50 transition"
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                ProductWise
+                                <Package className="w-3.5 h-3.5" /> Product-Wise
                             </button>
                             <button
                                 onClick={() => navigate("/purchases/purchase-reports")}
-                                className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-100 transition"
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                Purchase Audits
+                                <FileSpreadsheet className="w-3.5 h-3.5" /> Audits
                             </button>
                         </>
                     )}
 
-                    {/* Back button for reports/filtered views */}
                     {context !== "main" && (
                         <button
                             onClick={() => navigate(-1)}
-                            className="bg-gray-100 text-gray-600 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition"
+                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                         >
-                            ← Back
+                            <ArrowLeft className="w-3.5 h-3.5" /> Back
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-blue-500 shadow-sm">
-                    <p className="text-gray-400 text-xs font-bold uppercase">Total Cost</p>
-                    <p className="text-2xl font-black text-gray-800">৳{stats.total.toLocaleString()}</p>
+            {/* Financial Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Page Total Purchases</span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-slate-900">৳{stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-green-500 shadow-sm">
-                    <p className="text-gray-400 text-xs font-bold uppercase">Settled</p>
-                    <p className="text-2xl font-black text-green-600">৳{stats.paid.toLocaleString()}</p>
+
+                <div className="bg-emerald-50/50 border border-emerald-200 p-5 rounded-2xl flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Settled Disbursements</span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-emerald-700">৳{stats.paid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-red-500 shadow-sm">
-                    <p className="text-gray-400 text-xs font-bold uppercase">To Pay (Due)</p>
-                    <p className="text-2xl font-black text-red-600">৳{stats.due.toLocaleString()}</p>
+
+                <div className="bg-rose-50/50 border border-rose-200 p-5 rounded-2xl flex flex-col justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-rose-700">Pending Payables (Due)</span>
+                    <div className="mt-2">
+                        <span className="text-2xl font-black font-mono text-rose-600">৳{stats.due.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex bg-gray-100 p-1 rounded-xl mb-6 w-fit border border-gray-200">
-                {['all', 'due', 'paid'].map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => setFilter(t)}
-                        className={`px-6 py-2 rounded-lg text-sm font-bold capitalize transition-all ${filter === t ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            {/* Filter Tabs & Limit Selector */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                    {['all', 'due', 'paid'].map((t) => (
+                        <button
+                            key={t}
+                            onClick={() => handleFilterChange(t)}
+                            className={`px-4 py-1.5 rounded-lg capitalize transition-all ${
+                                filter === t ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            {t} Records
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span>Rows per page:</span>
+                    <select
+                        value={limit}
+                        onChange={handleLimitChange}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 font-bold outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                        {t} Records
-                    </button>
-                ))}
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                    </select>
+                </div>
             </div>
 
-            {/* Main Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left">
-                    <thead className="bg-gray-50 border-b border-gray-100">
-                        <tr>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">SL</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Date</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Supplier</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Products</th>
-                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Total</th>
-                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Paid</th>
-                            <th className="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase">Status</th>
-                            <th className="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {filteredPurchases.map((p,idx) => {
-                            const due = p.total_amount - p.paid_amount;
-                            return (
-                                <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-6 py-4 text-sm font-bold text-orange-600">
-                                        {idx + 1}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-bold text-orange-600">
-                                        {p.date ? format(new Date(p.date), "Pp") : "-"}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{p.supplier_name || p.supplier_id || 'Walk-in'}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{p?.products?.length}</td>
-                                    <td className="px-6 py-4 text-sm text-right font-bold text-gray-800">৳{p.total_amount.toFixed(2)}</td>
-                                    <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">৳{p.paid_amount.toFixed(2)}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${due > 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
-                                            {due > 0 ? `৳${due.toFixed(2)} Due` : 'Settled'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center space-x-3">
-                                        {due > 0 && (
-                                            <button onClick={() => handleOpenPayment(p)} className="text-emerald-600 hover:text-emerald-700 font-bold text-sm underline underline-offset-4">Pay</button>
-                                        )}
-                                        <Link to={`/purchases/edit/${p._id}`} className="text-indigo-500 hover:text-indigo-700 font-bold text-sm">Edit</Link>
-                                        <button onClick={() => handleViewPurchaseDetails(p)} className="text-gray-400 hover:text-red-500 transition-colors">Details</button>
-                                        <button onClick={() => handleDelete(p._id)} className="text-gray-400 hover:text-red-500 transition-colors">Delete</button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-                {filteredPurchases.length === 0 && <div className="p-20 text-center text-gray-400 font-medium italic">No matching records found.</div>}
+            {/* Main Purchases Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3.5 w-12 text-center">#</th>
+                                <th className="px-4 py-3.5">Date</th>
+                                <th className="px-4 py-3.5">Supplier</th>
+                                <th className="px-4 py-3.5 text-center">Items</th>
+                                <th className="px-4 py-3.5 text-right">Total (৳)</th>
+                                <th className="px-4 py-3.5 text-right">Paid (৳)</th>
+                                <th className="px-4 py-3.5 text-center">Status</th>
+                                <th className="px-4 py-3.5 text-center w-36">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredPurchases.map((p, idx) => {
+                                const due = Number(p.total_amount || 0) - Number(p.paid_amount || 0);
+                                const serial = (page - 1) * limit + idx + 1;
+
+                                return (
+                                    <tr key={p._id} className="hover:bg-slate-50/70 transition-colors">
+                                        <td className="px-4 py-3 text-center text-xs font-semibold text-slate-400">
+                                            {serial}
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-slate-600 font-medium">
+                                            {p.date ? format(new Date(p.date), "dd MMM yyyy, hh:mm a") : "-"}
+                                        </td>
+                                        <td className="px-4 py-3 font-semibold text-slate-800">
+                                            {p.supplier_name || 'Walk-in Vendor'}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                                {p.products?.length || 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
+                                            ৳{Number(p.total_amount || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">
+                                            ৳{Number(p.paid_amount || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                due > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                            }`}>
+                                                {due > 0 ? `৳${due.toFixed(2)} Due` : 'Settled'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                {due > 0 && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleOpenPayment(p)} 
+                                                        className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold transition"
+                                                    >
+                                                        Pay
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleViewPurchaseDetails(p)}
+                                                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <Link 
+                                                    to={`/purchases/edit/${p._id}`} 
+                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition"
+                                                    title="Edit Order"
+                                                >
+                                                    <Edit3 className="w-4 h-4" />
+                                                </Link>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleDelete(p._id)} 
+                                                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredPurchases.length === 0 && (
+                    <div className="p-12 text-center text-slate-400 font-medium italic text-sm">
+                        No purchase records matching this criteria.
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 font-medium">
+                        Showing {totalRecords === 0 ? 0 : (page - 1) * limit + 1} to {Math.min(page * limit, totalRecords)} of {totalRecords} records
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                            disabled={page <= 1}
+                            className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {/* Page Pills */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                            .map((pNum, index, arr) => (
+                                <React.Fragment key={pNum}>
+                                    {index > 0 && arr[index - 1] !== pNum - 1 && (
+                                        <span className="px-1 text-slate-400">...</span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPage(pNum)}
+                                        className={`w-7 h-7 rounded-lg font-bold transition ${
+                                            page === pNum
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-slate-600 hover:bg-white border border-slate-200'
+                                        }`}
+                                    >
+                                        {pNum}
+                                    </button>
+                                </React.Fragment>
+                            ))}
+
+                        <button
+                            type="button"
+                            onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={page >= totalPages}
+                            className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* Payment Modal remains exactly as in your source... */}
+            {/* Quick Settle Payment Modal */}
             {showPaymentModal && selectedPurchase && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200">
-                        <h2 className="text-2xl font-black text-gray-800 mb-2">Record Payment</h2>
-                        <p className="text-gray-500 mb-6 text-sm">Settling debt for Purchase #{selectedPurchase._id.slice(-6)}</p>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+                        <h2 className="text-lg font-bold text-slate-900 mb-1">Record Supplier Payment</h2>
+                        <p className="text-xs text-slate-400 mb-4">
+                            Settling debt for Purchase #{selectedPurchase._id.slice(-6)}
+                        </p>
 
-                        <div className="space-y-3 bg-gray-50 p-4 rounded-2xl mb-6">
-                            <div className="flex justify-between text-sm"><span className="text-gray-500">Total Purchase:</span><span className="font-bold">৳{selectedPurchase.total_amount}</span></div>
-                            <div className="flex justify-between text-sm"><span className="text-gray-500">Outstanding Due:</span><span className="font-bold text-red-600">৳{remainingDueOnSelected}</span></div>
+                        <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs mb-4">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Total Purchase:</span>
+                                <span className="font-bold text-slate-800">৳{Number(selectedPurchase.total_amount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Outstanding Due:</span>
+                                <span className="font-bold text-rose-600 font-mono">৳{remainingDueOnSelected.toFixed(2)}</span>
+                            </div>
                         </div>
 
-                        <label className="text-xs font-bold uppercase text-gray-400 mb-2 block">Payment Amount</label>
+                        <label className="text-[11px] font-bold uppercase text-slate-400 mb-1 block">Payment Amount (৳)</label>
                         <input
                             type="number"
+                            min="0.01"
+                            step="any"
                             value={paymentAmount}
                             onChange={(e) => setPaymentAmount(e.target.value)}
-                            className="w-full p-4 border-2 border-gray-100 rounded-2xl mb-6 focus:border-orange-500 outline-none text-xl font-bold transition-all"
+                            className="w-full p-2.5 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-lg font-bold text-emerald-600"
                             placeholder="0.00"
                         />
 
-                        <label className="text-xs font-bold uppercase text-gray-400 mb-2 block">Withdraw From</label>
-                        <div className="grid grid-cols-2 gap-3 mb-6">
+                        <label className="text-[11px] font-bold uppercase text-slate-400 mb-1 block">Disbursement Account</label>
+                        <div className="grid grid-cols-2 gap-2 mb-6 max-h-36 overflow-y-auto">
                             {accounts.map(acc => (
                                 <button
+                                    type="button"
                                     key={acc._id}
                                     onClick={() => setSelectedAccountId(acc._id)}
-                                    className={`p-3 rounded-xl border-2 text-left transition-all ${selectedAccountId === acc._id ? 'border-orange-600 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}
+                                    className={`p-2.5 rounded-xl border text-left transition ${
+                                        selectedAccountId === acc._id 
+                                            ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold' 
+                                            : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                    }`}
                                 >
-                                    <p className="text-sm font-bold capitalize">{acc.type}</p>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-tighter">Balance: ৳{acc.balance}</p>
+                                    <p className="text-xs font-bold capitalize">{acc.type}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono">Balance: ৳{acc.balance}</p>
                                 </button>
                             ))}
                         </div>
 
-                        <div className="flex gap-4">
-                            <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600">Cancel</button>
-                            <button
-                                onClick={handleSubmitPayment}
-                                disabled={!selectedAccountId || !paymentAmount || paymentAmount > remainingDueOnSelected}
-                                className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-700 disabled:opacity-30 transition-all"
+                        <div className="flex gap-2.5">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowPaymentModal(false)} 
+                                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
                             >
-                                Confirm
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSubmitPayment}
+                                disabled={!selectedAccountId || !paymentAmount || Number(paymentAmount) > remainingDueOnSelected}
+                                className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-md disabled:opacity-40 transition"
+                            >
+                                Confirm Payment
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Add this at the bottom of your JSX */}
+            {/* Purchase Details Modal */}
             <PurchaseDetailsModal
                 isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
-                purchaseData={purchase} // Use the state from your parent component
+                purchaseData={purchase}
             />
         </div>
     );

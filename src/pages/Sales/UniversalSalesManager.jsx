@@ -17,7 +17,7 @@ const ACCOUNTS_API = `${BASE_API_URL}/api/payment_accounts`;
 const UniversalSalesManager = ({
     fetchUrl = SALES_API,
     title = "Sales Dashboard",
-    context = "main" // New prop: "main", "customer", "daily", etc.
+    context = "main" // "main", "customer", "daily", etc.
 }) => {
     const navigate = useNavigate();
 
@@ -28,34 +28,58 @@ const UniversalSalesManager = ({
     const [filter, setFilter] = useState('all');
     const [expandedMemoId, setExpandedMemoId] = useState(null);
 
+    // ✅ Pagination & API Summary State
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+    const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+    const [apiSummary, setApiSummary] = useState(null);
+
     // Modal State
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedMemo, setSelectedMemo] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState("");
     const [selectedAccountId, setSelectedAccountId] = useState("");
 
+    // Reset to page 1 if the core fetch URL changes
+    useEffect(() => {
+        setPage(1);
+    }, [fetchUrl]);
+
     // --- Data Fetching ---
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            // ✅ Send page and limit parameters to the updated controller
             const [salesRes, accountsRes] = await Promise.all([
-                axios.get(fetchUrl),
+                axios.get(fetchUrl, { params: { page, limit } }),
                 axios.get(ACCOUNTS_API)
             ]);
-            console.log(salesRes.data.data);
+            
             setMemos(salesRes.data.data || []);
             setAccounts(accountsRes.data.data || []);
+
+            // ✅ Capture database-driven pagination details
+            if (salesRes.data.pagination) {
+                setPagination(salesRes.data.pagination);
+            }
+            // ✅ Capture database-driven summaries (from report endpoints)
+            if (salesRes.data.summary) {
+                setApiSummary(salesRes.data.summary);
+            } else {
+                setApiSummary(null);
+            }
         } catch (err) {
             toast.error('Failed to synchronize data.');
         } finally {
             setLoading(false);
         }
-    }, [fetchUrl]); // Re-fetch if the URL changes
+    }, [fetchUrl, page, limit]); // Re-fetch on page/limit change
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     // --- Logic ---
     const filteredMemos = useMemo(() => {
+        // Note: Frontend filtering only applies to the current active page
         return memos.filter(m => {
             const due = m.due_amount || m.due || 0;
             if (filter === 'due') return due > 0;
@@ -64,13 +88,23 @@ const UniversalSalesManager = ({
         });
     }, [memos, filter]);
 
+    // ✅ Smart Stats: Use backend global summary if available, otherwise sum current page
     const stats = useMemo(() => {
+        if (apiSummary) {
+            return {
+                total: apiSummary.totalAmount || 0,
+                paid: apiSummary.totalPaid || 0,
+                due: apiSummary.due || 0,
+                label: "Global"
+            };
+        }
         return memos.reduce((acc, m) => ({
             total: acc.total + (m.total_amount || m.total || 0),
             paid: acc.paid + (m.paid_amount || m.paidAmount || 0),
             due: acc.due + (m.due_amount || m.due || 0),
-        }), { total: 0, paid: 0, due: 0 });
-    }, [memos]);
+            label: "Page"
+        }), { total: 0, paid: 0, due: 0, label: "Page" });
+    }, [memos, apiSummary]);
 
     // --- Action Handlers ---
     const handleOpenPayment = (memo) => {
@@ -103,16 +137,17 @@ const UniversalSalesManager = ({
     const handleDeleteSale = async (id) => {
         if (!window.confirm("Delete this record? This affects inventory.")) return;
         try {
-            const result = await axios.delete(`${SALES_API}/${id}`);
-            console.log(result);
+            await axios.delete(`${SALES_API}/${id}`);
             setMemos(prev => prev.filter(m => m._id !== id));
             toast.success('Deleted successfully');
+            // Check if page needs refetching (optional, but good UX)
+            if (memos.length === 1 && page > 1) setPage(p => p - 1);
         } catch (err) {
             toast.error('Delete failed');
         }
     };
 
-    if (loading) return <TruckLoader />;
+    if (loading && memos.length === 0) return <TruckLoader />;
 
     return (
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 max-w-7xl">
@@ -120,11 +155,11 @@ const UniversalSalesManager = ({
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-800">{title}</h1>
-                    <p className="text-gray-500 text-sm">Managing {memos.length} records in this view</p>
+                    <p className="text-gray-500 text-sm">Managing {pagination.total || memos.length} total records in database</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
-                    {/* UNIVERSAL BUTTON: Always visible or based on context */}
+                    {/* UNIVERSAL BUTTON */}
                     <button
                         onClick={() => navigate("/sales/create-sale")}
                         className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition"
@@ -132,7 +167,7 @@ const UniversalSalesManager = ({
                         + New Sale
                     </button>
 
-                    {/* CONDITIONAL BUTTONS: Only rendered on the "main" dashboard */}
+                    {/* CONDITIONAL BUTTONS */}
                     {context === "main" && (
                         <>
                             <button
@@ -156,7 +191,7 @@ const UniversalSalesManager = ({
                         </>
                     )}
 
-                    {/* BACK BUTTON: Useful for Customer/Report views */}
+                    {/* BACK BUTTON */}
                     {context !== "main" && (
                         <button
                             onClick={() => navigate(-1)}
@@ -168,11 +203,11 @@ const UniversalSalesManager = ({
                 </div>
             </div>
 
-            {/* Stats Section */}
+            {/* Stats Section (Labels update dynamically based on Global vs Page context) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
-                <StatCard label="Total Amount" value={stats.total} color="indigo" />
-                <StatCard label="Total Collected" value={stats.paid} color="green" />
-                <StatCard label="Total Receivables" value={stats.due} color="orange" />
+                <StatCard label={`${stats.label} Amount`} value={stats.total} color="indigo" />
+                <StatCard label={`${stats.label} Collected`} value={stats.paid} color="green" />
+                <StatCard label={`${stats.label} Receivables`} value={stats.due} color="orange" />
             </div>
 
             {/* Filter Tabs */}
@@ -190,7 +225,14 @@ const UniversalSalesManager = ({
 
             {/* Main Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left hidden lg:block">
+                
+                {loading && memos.length > 0 && (
+                     <div className="h-1 w-full bg-indigo-100 overflow-hidden">
+                        <div className="h-full bg-indigo-500 animate-pulse w-1/3 rounded-full"></div>
+                     </div>
+                )}
+
+                <table className="w-full text-left hidden lg:table">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
                             <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Date</th>
@@ -215,31 +257,47 @@ const UniversalSalesManager = ({
                         ))}
                     </tbody>
                 </table>
-                {filteredMemos.length === 0 && <div className="p-20 text-center text-gray-400 font-medium italic">No matching records found.</div>}
+                {filteredMemos.length === 0 && !loading && (
+                    <div className="p-20 text-center text-gray-400 font-medium italic">No matching records found.</div>
+                )}
+
+                {/* ✅ Pagination Controls (Desktop & Bottom Wrapper) */}
+                <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-t border-gray-100 bg-gray-50 gap-4">
+                    <span className="text-sm text-gray-500 font-medium">
+                        Showing Page <span className="font-bold text-gray-700">{pagination.page || page}</span> of <span className="font-bold text-gray-700">{pagination.totalPages || 1}</span> 
+                        <span className="hidden sm:inline"> ({pagination.total || memos.length} total records)</span>
+                    </span>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            disabled={page >= (pagination.totalPages || 1)}
+                            onClick={() => setPage(p => p + 1)}
+                            className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
             </div>
 
-
             {/* Mobile, Tablet View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-4 mt-6">
                 {filteredMemos.map((memo) => {
                     const due = memo.due_amount || memo.due || 0;
 
                     return (
-                        <div
-                            key={memo._id}
-                            className="bg-white rounded-xl border p-4 shadow-sm"
-                        >
+                        <div key={memo._id} className="bg-white rounded-xl border p-4 shadow-sm">
                             <div className="flex justify-between items-start gap-2">
                                 <span className="font-bold text-sm">
                                     {memo.memoNo}
                                 </span>
-
-                                <span
-                                    className={`text-xs px-2 py-1 rounded-full ${due > 0
-                                        ? "bg-orange-100 text-orange-600"
-                                        : "bg-green-100 text-green-600"
-                                        }`}
-                                >
+                                <span className={`text-xs px-2 py-1 rounded-full ${due > 0 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"}`}>
                                     {due > 0 ? "Due" : "Paid"}
                                 </span>
                             </div>
@@ -249,9 +307,7 @@ const UniversalSalesManager = ({
                             </p>
 
                             <p className="text-xs text-gray-400 mt-1">
-                                {memo?.date
-                                    ? format(new Date(memo.date), "Pp")
-                                    : "-"}
+                                {memo?.date ? format(new Date(memo.date), "Pp") : "-"}
                             </p>
 
                             <p className="mt-3 font-bold">
@@ -261,42 +317,34 @@ const UniversalSalesManager = ({
                             <div className="flex flex-wrap gap-2 mt-4">
                                 <button
                                     onClick={() => navigate(`/sales/${memo._id}`)}
-                                    className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded text-sm"
+                                    className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded text-sm font-semibold"
                                 >
                                     View
                                 </button>
-
                                 {due > 0 && (
                                     <button
                                         onClick={() => handleOpenPayment(memo)}
-                                        className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm"
+                                        className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm font-semibold"
                                     >
                                         Collect
                                     </button>
                                 )}
-
                                 <button
-                                    onClick={() => setExpandedMemoId(
-                                        expandedMemoId === memo._id ? null : memo._id
-                                    )}
-                                    className="px-3 py-1 bg-gray-50 text-gray-600 rounded text-sm"
+                                    onClick={() => setExpandedMemoId(expandedMemoId === memo._id ? null : memo._id)}
+                                    className="px-3 py-1 bg-gray-50 text-gray-600 rounded text-sm font-semibold"
                                 >
                                     Items
                                 </button>
                             </div>
 
                             {expandedMemoId === memo._id && (
-                                <div className="mt-4 border-t pt-3">
+                                <div className="mt-4 border-t pt-3 space-y-1">
                                     {memo.products?.map((p, i) => (
-                                        <div
-                                            key={i}
-                                            className="flex justify-between py-1 text-sm"
-                                        >
-                                            <span>
-                                                {p.item_name || p.name} × {p.qty}
+                                        <div key={i} className="flex justify-between text-sm">
+                                            <span className="text-gray-600">
+                                                {p.item_name || p.name} <span className="text-gray-400">× {p.qty}</span>
                                             </span>
-
-                                            <span>
+                                            <span className="font-medium text-gray-800">
                                                 ৳{(p.subtotal || 0).toFixed(2)}
                                             </span>
                                         </div>
@@ -308,7 +356,7 @@ const UniversalSalesManager = ({
                 })}
             </div>
 
-
+            {/* Payment Modal */}
             {showPaymentModal && selectedMemo && (
                 <PaymentModal
                     selectedMemo={selectedMemo}
@@ -325,22 +373,13 @@ const UniversalSalesManager = ({
     );
 };
 
-// --- Sub-Components (Keep these in the same file or separate UI file) ---
+// --- Sub-Components ---
 
 const StatCard = ({ label, value, color }) => {
     const styles = {
-        indigo: {
-            border: "border-indigo-500",
-            text: "text-indigo-600"
-        },
-        green: {
-            border: "border-green-500",
-            text: "text-green-600"
-        },
-        orange: {
-            border: "border-orange-500",
-            text: "text-orange-600"
-        }
+        indigo: { border: "border-indigo-500", text: "text-indigo-600" },
+        green: { border: "border-green-500", text: "text-green-600" },
+        orange: { border: "border-orange-500", text: "text-orange-600" }
     };
 
     return (
@@ -348,9 +387,8 @@ const StatCard = ({ label, value, color }) => {
             <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">
                 {label}
             </p>
-
             <p className={`text-2xl md:text-3xl font-black ${styles[color].text}`}>
-                ৳{value.toLocaleString()}
+                ৳{(value || 0).toLocaleString()}
             </p>
         </div>
     );

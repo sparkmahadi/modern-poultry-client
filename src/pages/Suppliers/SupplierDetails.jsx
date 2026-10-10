@@ -1,215 +1,409 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
+import { toast } from 'react-toastify';
 import {
     MapPin,
     Phone,
-    CheckCircle,
-    XOctagon,
-    Tag,
-    Truck,
+    Building2,
     DollarSign,
     ArrowUpCircle,
     ArrowDownCircle,
     AlertTriangle,
     Calendar,
-    Briefcase,
+    Edit3,
+    Trash2,
+    ArrowLeft,
+    CheckCircle2,
+    Calculator,
+    Wallet
 } from 'lucide-react';
 import UniversalPurchaseManager from '../Purchase/UniversalPurchaseManager';
 import PayDueManuallyModal from './PayDueManuallyModal';
+import SupplierAddEditModal from './SupplierAddEditModal';
+import { format } from 'date-fns';
 
-// Use a placeholder for the actual API base URL from env
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/suppliers`;
 
-// --- Helper Functions (Adjusted/Expanded) ---
-
 const formatBalance = (due, advance) => {
-    const balance = due - advance;
+    const d = Number(due) || 0;
+    const a = Number(advance) || 0;
+    const balance = d - a;
     const absBalance = Math.abs(balance).toFixed(2);
 
-    if (balance > 0) return { label: `৳${absBalance} Payable`, className: 'text-red-600 border-red-200', icon: ArrowUpCircle };
-    if (balance < 0) return { label: `৳${absBalance} Receivable`, className: 'text-green-600 border-green-200', icon: ArrowDownCircle };
-    return { label: 'Settled', className: 'text-gray-600 border-gray-200', icon: DollarSign };
+    if (balance > 0) return { label: `৳${absBalance} Payable`, className: 'text-rose-600 bg-rose-50/60 border-rose-200', icon: ArrowUpCircle };
+    if (balance < 0) return { label: `৳${absBalance} Receivable`, className: 'text-emerald-600 bg-emerald-50/60 border-emerald-200', icon: ArrowDownCircle };
+    return { label: 'Settled ৳0.00', className: 'text-slate-500 bg-slate-50 border-slate-200', icon: DollarSign };
 };
 
-const formatDate = (dateObject) => {
-    if (!dateObject || !dateObject.$date) return 'N/A';
-    return new Date(dateObject.$date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
-
-// Simplified DetailRow for the new layout style (less icon, more clean text)
 const DetailBlock = ({ label, value, className = "" }) => (
-    <div className={`p-3 ${className}`}>
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-        <p className="text-lg font-bold text-gray-900 break-words mt-1">{value}</p>
+    <div className={`p-3.5 bg-slate-50 border border-slate-200 rounded-xl ${className}`}>
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="text-base font-bold text-slate-800 break-words mt-1">{value || 'N/A'}</p>
     </div>
 );
 
-// --- Main Component ---
-
 const SupplierDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
+
     const [supplier, setSupplier] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Modals
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState({
+        name: "",
+        address: "",
+        phone: "",
+        type: "regular",
+        manual_due: 0,
+        manual_advance: 0,
+        status: "active"
+    });
+    const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-    // Dummy data for fields not likely returned by the basic API (to match image fields)
-    const dummyStats = {
-        joinedDate: '2023-01-15', // Format for display: Jan 15, 2023
-        businessDuration: '1 year, 11 months',
-        averagePaymentTime: '12 Days',
-        commissionProvided: '2%',
-        profitMargin: '15%',
-        totalSoldMonth: 125000,
-        totalTransactionMonth: 45,
-        orderFrequencyMonth: '3.7 per week',
-        lastPurchased: 'Dec 10, 2024 (ID: P-987)',
-    };
+    // Key to trigger purchase history reload without page refresh
+    const [historyKey, setHistoryKey] = useState(Date.now());
 
-    useEffect(() => {
+    const fetchSupplierDetails = useCallback(async () => {
         if (!id) {
-            setError("Supplier ID is missing from the URL.");
+            setError("Supplier ID is missing from URL.");
             setIsLoading(false);
             return;
         }
-        fetchSupplierDetails();
-    }, [id]);
 
-    const fetchSupplierDetails = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Fetch the supplier data
             const res = await axios.get(`${API_BASE_URL}/${id}`);
-            // Merge real data with dummy stats for display
-            setSupplier({ ...dummyStats, ...res.data.data, ...res.data });
+            const sup = res.data?.data || res.data;
+            setSupplier(sup);
+            setEditForm({
+                name: sup.name || "",
+                address: sup.address || "",
+                phone: sup.phone || "",
+                type: sup.type || "regular",
+                manual_due: Number(sup.manual_due) || 0,
+                manual_advance: Number(sup.manual_advance) || 0,
+                status: sup.status || "active"
+            });
         } catch (err) {
-            console.error("Fetch error:", err);
+            console.error("Fetch supplier error:", err);
             if (err.response?.status === 404) setError(`Supplier with ID "${id}" was not found.`);
-            else setError("Failed to fetch supplier details. Please try again.");
+            else setError("Failed to fetch supplier details.");
+            toast.error("Could not load supplier information.");
         } finally {
             setIsLoading(false);
         }
+    }, [id]);
+
+    useEffect(() => {
+        fetchSupplierDetails();
+    }, [fetchSupplierDetails]);
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmittingEdit(true);
+        try {
+            await axios.put(`${API_BASE_URL}/${id}`, editForm);
+            toast.success("Supplier details updated!");
+            setIsEditModalOpen(false);
+            fetchSupplierDetails();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to update supplier.");
+        } finally {
+            setIsSubmittingEdit(false);
+        }
     };
 
-    if (isLoading) return <div className="text-center p-10 bg-white rounded-xl shadow-lg"><Truck className="w-8 h-8 mx-auto text-blue-500 animate-spin" /><p className="mt-2 text-lg text-gray-700">Loading supplier data...</p></div>;
-    if (error) return <div className="p-6 bg-red-100 border-l-4 border-red-500 rounded-xl shadow-lg text-red-800"><div className="flex items-center space-x-3"><AlertTriangle className="w-6 h-6 flex-shrink-0" /><p className="font-bold text-lg">Error Loading Data:</p></div><p className="ml-9 mt-1">{error}</p></div>;
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this supplier?")) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/${id}`);
+            toast.success("Supplier deleted successfully.");
+            navigate('/suppliers');
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to delete supplier.");
+        }
+    };
 
-    const balanceInfo = formatBalance(supplier.due, supplier.advance);
-    const StatusIcon = supplier.status === 'active' ? CheckCircle : XOctagon;
-    const suppliedProductsString = supplier?.supplied_products?.join(", ") || 'N/A';
+    if (isLoading) {
+        return (
+            <div className="p-16 text-center text-blue-600 font-bold flex items-center justify-center gap-2">
+                <Building2 className="w-5 h-5 animate-spin" /> Synchronizing Supplier Profile...
+            </div>
+        );
+    }
 
-    // Calculated field for Total Due / Total Paid based on the image format
-    const netBalance = supplier.due - supplier.advance;
-    const netBalanceText = netBalance > 0
-        ? `৳${netBalance.toFixed(2)}` // Payable
-        : netBalance < 0
-            ? `৳${Math.abs(netBalance).toFixed(2)}` // Receivable
-            : '৳0.00';
+    if (error || !supplier) {
+        return (
+            <div className="p-8 max-w-xl mx-auto font-sans">
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-6 rounded-2xl">
+                    <div className="flex items-center gap-2 font-bold text-base">
+                        <AlertTriangle className="w-5 h-5 text-rose-600" />
+                        <span>Error Loading Profile</span>
+                    </div>
+                    <p className="text-xs text-rose-600 mt-2">{error || "Supplier not found."}</p>
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="mt-4 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const totalDue = (Number(supplier.manual_due) || 0) + (Number(supplier.due) || 0);
+    const totalAdv = (Number(supplier.manual_advance) || 0) + (Number(supplier.advance) || 0);
+    const balanceInfo = formatBalance(totalDue, totalAdv);
+    const netBalance = totalDue - totalAdv;
 
     return (
-        <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans text-slate-700 space-y-6">
+            <div className="max-w-7xl mx-auto space-y-6">
 
-            <div className="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
-
-                {/* Header Section */}
-                <header className="border-b pb-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between">
-                    <h1 className="text-3xl font-extrabold text-gray-900">Details of <span className="text-blue-600">{supplier.name}</span></h1>
-                    <div className="flex items-center space-x-4 mt-3 sm:mt-0">
+                {/* Top Header Card */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 text-white p-5 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setIsPaymentModalOpen(true)}
-                            className="bg-green-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-green-700 transition flex items-center gap-2 shadow-md"
+                            type="button"
+                            onClick={() => navigate(-1)}
+                            className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition"
+                            title="Back"
                         >
-                            <span className="text-lg">💰</span> Pay Due Manually
+                            <ArrowLeft className="w-5 h-5" />
                         </button>
-                        <button className="text-sm font-bold text-yellow-600 hover:text-yellow-800 transition flex items-center gap-1">
-                            <Briefcase className='w-4 h-4' /> Edit
+                        <div className="p-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+                            <Building2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-bold tracking-tight text-white">{supplier.name}</h1>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    supplier.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}>
+                                    {supplier.status || 'Active'}
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">Supplier ID: {supplier._id}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsPaymentModalOpen(true)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5"
+                        >
+                            <span>💰</span> Settle Due (FIFO)
                         </button>
-                        <button className="text-sm font-bold text-red-600 hover:text-red-800 transition flex items-center gap-1">
-                            <XOctagon className='w-4 h-4' /> Delete
+                        <button
+                            type="button"
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <Edit3 className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            className="bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
                     </div>
-                </header>
+                </div>
 
-                {/* --- Main Info Grid (Left Side, Right Side of Image) --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* LEFT COLUMN (Supplier Info, Payment Due, Financials) */}
-                    <div className="space-y-4">
-                        <h2 className="text-xl font-bold text-gray-700 mb-3 border-b pb-2">Basic Information</h2>
-
-                        {/* Supplier Info Block (Joined Date, Business Duration, Payment Time, Commission) */}
-                        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
-                            <DetailBlock label="Joined Date" value={new Date(supplier.joinedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} />
-                            <DetailBlock label="Business Duration" value={supplier.businessDuration} />
-                            <DetailBlock label="Average Payment Time" value={supplier.averagePaymentTime} />
-                            <DetailBlock label="Commission Provided" value={supplier.commissionProvided} />
+                {/* Financial Health Banner */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-rose-50 rounded-xl text-rose-600 border border-rose-100"><Calculator className="w-6 h-6" /></div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Payable (Due)</p>
+                            <p className="text-2xl font-black font-mono text-slate-900">৳{totalDue.toFixed(2)}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Manual: ৳{(Number(supplier.manual_due) || 0).toFixed(2)} | System: ৳{(Number(supplier.due) || 0).toFixed(2)}</p>
                         </div>
+                    </div>
 
-                        <h2 className="text-xl font-bold text-gray-700 mb-3 pt-4 border-t border-b pb-2">Payment Due on ({supplier.name})</h2>
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100"><Wallet className="w-6 h-6" /></div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Advance (Paid Out)</p>
+                            <p className="text-2xl font-black font-mono text-emerald-700">৳{totalAdv.toFixed(2)}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Manual: ৳{(Number(supplier.manual_advance) || 0).toFixed(2)} | System: ৳{(Number(supplier.advance) || 0).toFixed(2)}</p>
+                        </div>
+                    </div>
 
-                        {/* Current Balance Card */}
-                        <div className={`p-4 rounded-lg border-2 shadow-sm ${balanceInfo.className}`}>
-                            <div className="flex items-center justify-between">
-                                <p className="text-lg font-bold">Current Balance</p>
-                                <p className="text-3xl font-extrabold">{balanceInfo.label}</p>
+                    <div className={`p-5 rounded-2xl border-2 shadow-sm flex items-center justify-between ${balanceInfo.className}`}>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Net Ledger Status</p>
+                            <p className="text-2xl font-black font-mono mt-1">{balanceInfo.label}</p>
+                            <p className="text-[11px] font-bold uppercase mt-0.5">{netBalance >= 0 ? "Outstanding Debt" : "Credit Balance"}</p>
+                        </div>
+                        <balanceInfo.icon className="w-8 h-8 opacity-80" />
+                    </div>
+                </div>
+
+                {/* Profile Information Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-100">
+                            Contact & Location
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <DetailBlock label="Phone Number" value={supplier.phone || 'N/A'} />
+                            <DetailBlock label="Supplier Type" value={(supplier.type || 'regular').toUpperCase()} />
+                            <div className="sm:col-span-2">
+                                <DetailBlock label="Office / Depot Address" value={supplier.address || 'N/A'} />
                             </div>
                         </div>
-
-                        {/* Financial Details (Profit Margin, Provided Products, Total Amount, Total Paid, Total Due) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <DetailBlock label="Profit Margin" value={supplier.profitMargin} />
-                            <DetailBlock label="Provided Products" value={suppliedProductsString.substring(0, 30) + (suppliedProductsString.length > 30 ? '...' : '')} />
-                            <DetailBlock label="Total Amount" value={`৳${supplier.due.toFixed(2)}`} />
-                            <DetailBlock label="Total Paid" value={`৳${supplier.advance.toFixed(2)}`} />
-                            <DetailBlock label="Total Due (Net)" value={netBalanceText} className={netBalance > 0 ? 'text-red-600' : 'text-green-600'} />
-                            <DetailBlock label="Last Purchased" value={supplier.lastPurchased} />
-                        </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Address, Phone, Monthly Stats) */}
-                    <div className="space-y-4">
-                        <h2 className="text-xl font-bold text-gray-700 mb-3 border-b pb-2">Contact & Location</h2>
-
-                        {/* Address and Phone */}
-                        <div className="grid grid-cols-1 gap-4 bg-gray-50 p-4 rounded-lg border">
-                            <DetailBlock label="Phone" value={supplier.phone || 'N/A'} />
-                            <DetailBlock label="Address" value={supplier.address || 'N/A'} />
-                            <DetailBlock label="Supplier Type" value={supplier.type ? supplier.type.charAt(0).toUpperCase() + supplier.type.slice(1) : 'N/A'} />
-                        </div>
-
-                        <h2 className="text-xl font-bold text-gray-700 mb-3 pt-4 border-t border-b pb-2">Monthly Statistics</h2>
-
-                        {/* Monthly Stats (Total Sold, Transactions, Order Frequency) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <DetailBlock label="Total Sold/Month" value={`৳${supplier.totalSoldMonth.toLocaleString()}`} />
-                            <DetailBlock label="Total Transaction/Month" value={supplier.totalTransactionMonth} />
-                            <DetailBlock label="Order Frequency/Month" value={supplier.orderFrequencyMonth} />
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-100">
+                            Account Metadata & Purchases
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <DetailBlock 
+                                label="Created Date" 
+                                value={supplier.createdAt ? format(new Date(supplier.createdAt), "dd MMM yyyy") : 'N/A'} 
+                            />
+                            <DetailBlock 
+                                label="Last Purchase" 
+                                value={supplier.last_purchase_date ? format(new Date(supplier.last_purchase_date), "dd MMM yyyy, hh:mm a") : 'No orders yet'} 
+                            />
+                            <div className="sm:col-span-2">
+                                <DetailBlock 
+                                    label="Total Purchases Tracked" 
+                                    value={`৳${(Number(supplier.total_purchase) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- Transaction History (Moved to bottom and simplified) --- */}
-                {/* Purchase history from this Supplier */}
+                {/* Paginated Purchase History for this Supplier */}
                 <UniversalPurchaseManager
+                    key={historyKey}
                     context="supplier"
-                    title={`History: ${supplier.name}`}
-                    fetchUrl={`${import.meta.env.VITE_API_BASE_URL}/api/purchases/supplier-purchases/${supplier._id}`}
+                    title={`Orders from ${supplier.name}`}
+                    fetchUrl={`${import.meta.env.VITE_API_BASE_URL}/api/purchases?supplier_id=${supplier._id}`}
                 />
 
+                {/* FIFO Payment Modal */}
                 <PayDueManuallyModal
                     isOpen={isPaymentModalOpen}
                     onClose={() => setIsPaymentModalOpen(false)}
                     supplierId={supplier._id}
                     supplierName={supplier.name}
                     onPaymentSuccess={() => {
-                        fetchSupplierDetails(); // Refresh balance/due cards
-                        // Trigger a refresh of the sales history
-                        window.location.reload();
+                        fetchSupplierDetails();
+                        setHistoryKey(Date.now()); // Re-triggers purchase order sync without page reload
                     }}
                 />
 
+                {/* Inline Edit Modal */}
+                <SupplierAddEditModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    title={`Edit ${supplier.name}`}
+                >
+                    <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
+                        <div>
+                            <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Company / Supplier Name</label>
+                            <input
+                                type="text"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:bg-white"
+                                required
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Phone</label>
+                                <input
+                                    type="text"
+                                    value={editForm.phone}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Type</label>
+                                <select
+                                    value={editForm.type}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, type: e.target.value }))}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:bg-white"
+                                >
+                                    <option value="regular">Regular</option>
+                                    <option value="corporate">Corporate</option>
+                                    <option value="occasional">Occasional</option>
+                                    <option value="international">International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Address</label>
+                            <input
+                                type="text"
+                                value={editForm.address}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:bg-white"
+                            />
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block border-b border-slate-200 pb-1">
+                                Manual Opening Ledger Adjustments
+                            </span>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Payable (৳ Due)</label>
+                                    <input
+                                        type="number"
+                                        value={editForm.manual_due}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, manual_due: Number(e.target.value) || 0 }))}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Advance (৳ Deposit)</label>
+                                    <input
+                                        type="number"
+                                        value={editForm.manual_advance}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, manual_advance: Number(e.target.value) || 0 }))}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2.5 pt-3 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setIsEditModalOpen(false)}
+                                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                                disabled={isSubmittingEdit}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmittingEdit}
+                                className="flex-1 bg-slate-900 hover:bg-black text-white py-2.5 rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
+                            >
+                                {isSubmittingEdit ? "Saving..." : "Save Changes"}
+                            </button>
+                        </div>
+                    </form>
+                </SupplierAddEditModal>
             </div>
         </div>
     );
