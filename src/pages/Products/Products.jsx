@@ -34,6 +34,7 @@ function Products() {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/products`);
             setProducts(response?.data?.data || response?.data || []);
+            console.log("products", response);
         } catch (error) {
             toast.error('Failed to load products.');
             setProducts([]);
@@ -46,6 +47,7 @@ function Products() {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/utilities/categories`);
             setCategories(response?.data?.data || response?.data || []);
+            console.log("categories", response);
         } catch (error) {
             console.error('Failed to fetch categories');
         }
@@ -108,16 +110,26 @@ function Products() {
         const query = searchQuery.trim().toLowerCase();
 
         return products.filter((product) => {
-            const productId = String(product._id || product.id || '');
-            const itemName = (product.item_name || product.name || '').toLowerCase();
-            const productCatId = String(product.category_id || product.category?._id || product.category || '');
+            const productId = String(product._id || product.id || "");
+            const itemName = String(
+                product.item_name || product.name || ""
+            ).toLowerCase();
 
-            const matchesSearch = !query || itemName.includes(query) || productId.includes(query);
-            const matchesCategory = selectedCategory === 'all' || productCatId === String(selectedCategory);
+            const productCatId = String(product.category_id || "");
+
+            const matchesSearch =
+                !query ||
+                itemName.includes(query) ||
+                productId.toLowerCase().includes(query);
+
+            const matchesCategory =
+                selectedCategory === "all" ||
+                productCatId === selectedCategory;
 
             return matchesSearch && matchesCategory;
         });
     }, [products, searchQuery, selectedCategory]);
+
 
     if (loading) return <div className="p-10 text-center animate-pulse text-gray-500">Loading Inventory...</div>;
 
@@ -168,21 +180,21 @@ function Products() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Filter className="text-gray-400" size={18} />
+
                         <select
                             className="border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-gray-600"
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option value="all">All Categories</option>
-                            {categories.map((cat) => {
-                                const catId = cat._id || cat.id;
-                                return (
-                                    <option key={catId} value={catId}>
-                                        {cat.name}
-                                    </option>
-                                );
-                            })}
+
+                            {categories.map((cat) => (
+                                <option key={cat._id || cat.id} value={cat.id}>
+                                    {cat.name}
+                                </option>
+                            ))}
                         </select>
+
                     </div>
                 </div>
 
@@ -194,7 +206,7 @@ function Products() {
                                 <tr className="bg-gray-50 border-b border-gray-200">
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">SL</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Info</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category Name</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock Unit</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
@@ -204,10 +216,12 @@ function Products() {
                                 {filteredProducts.length > 0 ? (
                                     filteredProducts.map((product, idx) => {
                                         const pId = product._id || product.id;
+                                        // const category = categories.find(
+                                        //     (c) => String(c._id || c.id) === String(product.category_id || product.category?._id || product.category)
+                                        // );
                                         const category = categories.find(
-                                            (c) => String(c._id || c.id) === String(product.category_id || product.category?._id || product.category)
+                                            (cat) => String(cat.id) === String(product.category_id)
                                         );
-
                                         return (
                                             <tr key={pId || idx} className="hover:bg-blue-50/30 transition-colors group">
                                                 <td className="px-6 py-4">
