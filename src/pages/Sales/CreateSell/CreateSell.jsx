@@ -199,19 +199,19 @@ const CreateSell = () => {
         }
     };
 
-const handleBatchCreated = (newBatch) => {
-    if (!newBatch || !newBatch._id) return;
+    const handleBatchCreated = (newBatch) => {
+        if (!newBatch || !newBatch._id) return;
 
-    // Add to list and auto-select
-    setBatches((prev) => [newBatch, ...prev.filter((b) => b._id !== newBatch._id)]);
-    setSelectedBatchId(newBatch._id);
-    setIsBatchModalOpen(false);
+        // Add to list and auto-select
+        setBatches((prev) => [newBatch, ...prev.filter((b) => b._id !== newBatch._id)]);
+        setSelectedBatchId(newBatch._id);
+        setIsBatchModalOpen(false);
 
-    // If batch belongs to a farmer and customer isn't selected, select them
-    if (newBatch.farmerId && !selectedCustomer) {
-        fetchCustomerById(newBatch.farmerId);
-    }
-};
+        // If batch belongs to a farmer and customer isn't selected, select them
+        if (newBatch.farmerId && !selectedCustomer) {
+            fetchCustomerById(newBatch.farmerId);
+        }
+    };
     // Debounced Product Search
     useEffect(() => {
         const delay = setTimeout(async () => {
@@ -327,6 +327,90 @@ const handleBatchCreated = (newBatch) => {
 
     const selectedBatchDetails = batches.find((b) => b._id === selectedBatchId);
 
+    const handleCustomerChange = (e) => {
+        const { name, value, type } = e.target;
+
+        setCustomerForm((prev) => ({
+            ...prev,
+            [name]: type === 'number'
+                ? (value === '' ? 0 : Number(value))
+                : value
+        }));
+
+        setCustomerError(null);
+    };
+
+    const initialCustomerFormState = {
+        name: '',
+        address: '',
+        phone: '',
+        type: 'permanent',
+        due: 0,
+        advance: 0,
+        manual_due: 0,
+        manual_advance: 0,
+        status: 'active'
+    };
+
+    const [customerForm, setCustomerForm] = useState(initialCustomerFormState);
+    const [customerSaving, setCustomerSaving] = useState(false);
+    const [customerError, setCustomerError] = useState(null);
+
+    const resetCustomerForm = () => {
+        setCustomerForm(initialCustomerFormState);
+        setCustomerError(null);
+        setIsCustomerModalOpen(false);
+    };
+
+    const handleCustomerSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!customerForm.name.trim()) {
+            setCustomerError('Customer name is required.');
+            return;
+        }
+
+        setCustomerSaving(true);
+        setCustomerError(null);
+
+        try {
+            const res = await axios.post(
+                `${API_BASE_URL}/api/customers`,
+                customerForm
+            );
+
+            const newCustomer = res.data?.data;
+
+            if (!newCustomer?._id) {
+                throw new Error(
+                    res.data?.message || 'Customer creation failed.'
+                );
+            }
+
+            toast.success(
+                res.data?.message || 'New customer registered successfully!'
+            );
+
+            // Select the newly created customer in the sales invoice
+            setSelectedCustomer(newCustomer);
+
+            setCustomerSearch('');
+            setCustomerResults([]);
+            setShowCustomerResults(false);
+
+            resetCustomerForm();
+        } catch (err) {
+            const message =
+                err.response?.data?.message ||
+                err.message ||
+                'Failed to create customer.';
+
+            setCustomerError(message);
+            toast.error(message);
+        } finally {
+            setCustomerSaving(false);
+        }
+    };
     return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto font-sans text-slate-700 min-h-screen">
             {/* Top Toolbar */}
@@ -462,7 +546,7 @@ const handleBatchCreated = (newBatch) => {
                                 placeholder={selectedCustomer ? `Search ${selectedCustomer.name}'s batches...` : "Search available farm batches..."}
                                 className="w-full bg-white border border-amber-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition placeholder:text-amber-700/40"
                             />
-                            
+
                             {showBatchResults && (
                                 <ul className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
                                     {displayedBatches.length > 0 ? (
@@ -480,7 +564,7 @@ const handleBatchCreated = (newBatch) => {
                                         <li className="p-4 text-sm text-slate-500 text-center flex flex-col items-center gap-2">
                                             No batches found for this criteria.
                                             {selectedCustomer && (
-                                                <button 
+                                                <button
                                                     onClick={() => setIsBatchModalOpen(true)}
                                                     className="text-xs font-bold text-amber-600 underline"
                                                 >
@@ -501,7 +585,7 @@ const handleBatchCreated = (newBatch) => {
                                 <X className="w-4 h-4" />
                             </button>
                             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                {selectedBatchDetails?.chicksBreed || 'Batch'} 
+                                {selectedBatchDetails?.chicksBreed || 'Batch'}
                                 <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase">Active</span>
                             </h3>
                             <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
@@ -588,11 +672,10 @@ const handleBatchCreated = (newBatch) => {
                                             <td className="px-4 py-3 font-semibold text-slate-800">{p.item_name}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span
-                                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                                        remaining < 0
-                                                            ? 'bg-rose-50 text-rose-600'
-                                                            : 'bg-emerald-50 text-emerald-700'
-                                                    }`}
+                                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${remaining < 0
+                                                        ? 'bg-rose-50 text-rose-600'
+                                                        : 'bg-emerald-50 text-emerald-700'
+                                                        }`}
                                                 >
                                                     {remaining < 0 ? (
                                                         <AlertTriangle className="w-3 h-3" />
@@ -722,11 +805,10 @@ const handleBatchCreated = (newBatch) => {
                     </div>
 
                     <div
-                        className={`p-3.5 rounded-xl border flex items-center justify-between ${
-                            remainingDue > 0
-                                ? 'bg-rose-50 border-rose-100 text-rose-900'
-                                : 'bg-emerald-50 border-emerald-100 text-emerald-900'
-                        }`}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between ${remainingDue > 0
+                            ? 'bg-rose-50 border-rose-100 text-rose-900'
+                            : 'bg-emerald-50 border-emerald-100 text-emerald-900'
+                            }`}
                     >
                         <div>
                             <span className="text-xs font-bold uppercase tracking-wider block">
@@ -754,7 +836,7 @@ const handleBatchCreated = (newBatch) => {
             </div>
 
             {/* Modals */}
-            <CustomerFormModal
+            {/* <CustomerFormModal
                 isOpen={isCustomerModalOpen}
                 onClose={() => setIsCustomerModalOpen(false)}
                 form={{ name: '', phone: '', address: '', type: 'permanent', status: 'active' }}
@@ -767,7 +849,20 @@ const handleBatchCreated = (newBatch) => {
                     setIsCustomerModalOpen(false);
                 }}
                 resetForm={() => setIsCustomerModalOpen(false)}
+            /> */}
+
+            <CustomerFormModal
+                isOpen={isCustomerModalOpen}
+                onClose={resetCustomerForm}
+                form={customerForm}
+                editingId={null}
+                isLoading={customerSaving}
+                error={customerError}
+                handleChange={handleCustomerChange}
+                handleSubmit={handleCustomerSubmit}
+                resetForm={resetCustomerForm}
             />
+
 
             <PaymentModal
                 isOpen={showPaymentModal}
@@ -781,7 +876,7 @@ const handleBatchCreated = (newBatch) => {
 
             {/* NEW: Batch Creation Modal Integration */}
             {isBatchModalOpen && (
-                <CreateBatchForm 
+                <CreateBatchForm
                     batchData={selectedCustomer ? { farmer: selectedCustomer.name, farmerId: selectedCustomer._id } : null}
                     onSuccess={handleBatchCreated}
                     onClose={() => setIsBatchModalOpen(false)}
