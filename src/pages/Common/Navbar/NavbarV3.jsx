@@ -21,7 +21,7 @@ const NavbarV3 = () => {
 
   const labels = {
     en: {
-      brand: 'Emon Poultry',
+      brand: 'Emon PoultryV2.0',
       dashboard: "Dashboard", products: "Products", inventory: "Inventory",
       categories: "Categories", suppliers: "Suppliers", customers: "Customers",
       sales: "Sales", purchases: "Purchases", transactions: "Transactions",
